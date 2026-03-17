@@ -104,6 +104,17 @@ class SearchTools:
                     "api_response": response.text,
                     "results": []
                 }
+            elif response.status_code == 402:
+                error_msg = "Payment required - quota exceeded"
+                logger.error(f"Payment required error: {response.text}")
+                return {
+                    "success": False,
+                    "error": error_msg,
+                    "error_type": "payment_required",
+                    "status_code": response.status_code,
+                    "api_response": response.text,
+                    "results": []
+                }
             elif response.status_code == 400:
                 error_msg = "Bad request - invalid query parameters"
                 logger.error(f"Bad request error: {response.text}")
@@ -224,17 +235,18 @@ class SearchTools:
             # Log the error for debugging
             logger.error(f"Search failed - Type: {error_type}, Message: {error_msg}, Status: {status_code}")
             
-            # Format user-friendly error messages in Myanmar
+            # Format user-friendly error messages in Myanmar (enhanced for free tier users)
             error_messages = {
-                "missing_api_key": "❌ **API Key ပျောက်နေပါသည်**\n\nTAVILY_API_KEY ကို environment variables ထဲမှာ ထည့်ပေးပါ။",
-                "authentication_error": "❌ **API Key မှားနေပါသည်**\n\nTavily API key ကို စစ်ဆေးပြီး မှန်ကန်သော key ကို ထည့်ပေးပါ။",
-                "rate_limit_error": "❌ **API အသုံးပြုနှုန်းပြည့်နေပါသည်**\n\nခဏအကြာပြန်လည်ကြိုးစားပါ။",
-                "bad_request": "❌ **တောင်းဆိုမှုမှားနေပါသည်**\n\nရှာဖွေစရာကို ပြန်စစ်ဆေးပြီး ကြိုးစားပါ။",
-                "timeout_error": "❌ **တောင်းဆိုမှုကြာနေပါသည်**\n\nအင်တာနက်ချိတ်ဆက်မှုကို စစ်ဆေးပြီး ပြန်ကြိုးစားပါ။",
-                "connection_error": "❌ **ချိတ်ဆက်မှုပြဿနာ**\n\nအင်တာနက်ချိတ်ဆက်မှုကို စစ်ဆေးပါ။",
+                "missing_api_key": "❌ **API Key ပျောက်နေပါသည်**\n\nTAVILY_API_KEY ကို environment variables ထဲမှာ ထည့်ပေးပါ။\n\nFree tier အတွက် Tavily မှ API key ရယူရန်: https://tavily.com/",
+                "authentication_error": "❌ **API Key မှားနေပါသည် (401)**\n\nTavily API key ကို စစ်ဆေးပြီး မှန်ကန်သော key ကို ထည့်ပေးပါ။\n\nFree tier သုံးပါက key ကို ပြန်လည်စစ်ဆေးပါ။",
+                "rate_limit_error": "❌ **Free Tier Quota ပြည့်သွားပါသည် (429)**\n\nTavily Free tier ရဲ့ လစဉ်အသုံးပြုနှုန်းပြည့်သွားပါပြီ။\n\nအဖြေရှင်းများ:\n- ခဏအကြာပြန်လည်ကြိုးစားပါ (မိနစ်အနည်းငယ်စောင့်ပါ)\n- Free tier ကို upgrade လုပ်ပါက ပိုမိုအသုံးပြုနိုင်ပါသည်\n- နောက်ထပ် ရက်များတွင် ပြန်လည်ကြိုးစားပါ",
+                "payment_required": "❌ **Free Tier Quota ကုန်ဆုံးသွားပါသည် (402)**\n\nTavily Free tier ရဲ့ လစဉ် quota ကုန်ဆုံးသွားပါပြီ။\n\nအဖြေရှင်းများ:\n- နောက်ထပ် ရက်များတွင် ပြန်လည်ကြိုးစားပါ (quota ပြန်ဖြည့်ပါသည်)\n- Paid plan သို့ upgrade လုပ်ပါက ပိုမိုအသုံးပြုနိုင်ပါသည်\n- ယခုလအတွင်း ပြန်လည်ကြိုးစားမပါနှင့်",
+                "bad_request": "❌ **တောင်းဆိုမှုမှားနေပါသည် (400)**\n\nရှာဖွေစရာကို ပြန်စစ်ဆေးပြီး ကြိုးစားပါ။\n\nအကြံပြုချက်: ရိုးရှင်းသော keywords များကို အသုံးပြုပါ။",
+                "timeout_error": "❌ **တောင်းဆိုမှုကြာနေပါသည်**\n\nအင်တာနက်ချိတ်ဆက်မှုကို စစ်ဆေးပြီး ပြန်ကြိုးစားပါ။\n\nFree tier တွင် တစ်ခါလစ် နှေးနိုင်ပါသည်။",
+                "connection_error": "❌ **ချိတ်ဆက်မှုပြဿနာ**\n\nအင်တာနက်ချိတ်ဆက်မှုကို စစ်ဆေးပါ။\n\nTavily API server များကို ရောက်နိုင်မရောက် စစ်ဆေးပါ။",
                 "request_error": f"❌ **တောင်းဆိုမှုအမှား**\n\n{error_msg}",
-                "api_error": f"❌ **API အမှား ({status_code})**\n\n{error_msg}",
-                "unexpected_error": f"❌ **မမျှော်လင့်ထားသောအမှား**\n\n{error_msg}"
+                "api_error": f"❌ **API အမှား ({status_code})**\n\n{error_msg}\n\nFree tier အတွက် တချို့ API ကန့်သတ်ချက်များ ှိနိုင်ပါသည်။",
+                "unexpected_error": f"❌ **မမျှော်လင့်ထားသောအမှား**\n\n{error_msg}\n\nFree tier တွင် ဖြစ်တတ်သော ပြဿနာဖြစ်နိုင်ပါသည်။"
             }
             
             # Get the appropriate error message
