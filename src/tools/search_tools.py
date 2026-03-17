@@ -3,6 +3,11 @@ import requests
 from typing import Dict, List, Optional, Any
 from datetime import datetime
 import json
+import logging
+
+# Set up logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 class SearchTools:
     """
@@ -20,21 +25,31 @@ class SearchTools:
         self.api_key = api_key or os.getenv("TAVILY_API_KEY")
         self.base_url = "https://api.tavily.com"
         
+        # Check if API key is available
+        if not self.api_key:
+            logger.error("TAVILY_API_KEY is missing from environment variables")
+        else:
+            logger.info("SearchTools initialized with Tavily API key")
+        
     def search_tavily(self, query: str, max_results: int = 5) -> Dict[str, Any]:
         """
-        Perform web search using Tavily API.
+        Perform web search using Tavily API with enhanced error handling.
         
         Args:
             query: Search query
             max_results: Maximum number of results to return
             
         Returns:
-            Search results dictionary
+            Search results dictionary with detailed error information
         """
+        # Check API key first
         if not self.api_key:
+            error_msg = "API Key is missing in Environment"
+            logger.error(error_msg)
             return {
                 "success": False,
-                "error": "Tavily API key not configured",
+                "error": error_msg,
+                "error_type": "missing_api_key",
                 "results": []
             }
         
@@ -55,6 +70,8 @@ class SearchTools:
                 "exclude_domains": []
             }
             
+            logger.info(f"Making search request for query: '{query}'")
+            
             response = requests.post(
                 f"{self.base_url}/search",
                 headers=headers,
@@ -63,18 +80,87 @@ class SearchTools:
             )
             
             if response.status_code == 200:
+                logger.info("Search request successful")
                 return response.json()
-            else:
+            elif response.status_code == 401:
+                error_msg = "Invalid API key - authentication failed"
+                logger.error(f"Authentication error: {response.text}")
                 return {
                     "success": False,
-                    "error": f"API request failed: {response.status_code}",
+                    "error": error_msg,
+                    "error_type": "authentication_error",
+                    "status_code": response.status_code,
+                    "api_response": response.text,
+                    "results": []
+                }
+            elif response.status_code == 429:
+                error_msg = "API rate limit exceeded - please try again later"
+                logger.error(f"Rate limit error: {response.text}")
+                return {
+                    "success": False,
+                    "error": error_msg,
+                    "error_type": "rate_limit_error",
+                    "status_code": response.status_code,
+                    "api_response": response.text,
+                    "results": []
+                }
+            elif response.status_code == 400:
+                error_msg = "Bad request - invalid query parameters"
+                logger.error(f"Bad request error: {response.text}")
+                return {
+                    "success": False,
+                    "error": error_msg,
+                    "error_type": "bad_request",
+                    "status_code": response.status_code,
+                    "api_response": response.text,
+                    "results": []
+                }
+            else:
+                error_msg = f"API request failed with status code {response.status_code}"
+                logger.error(f"API error {response.status_code}: {response.text}")
+                return {
+                    "success": False,
+                    "error": error_msg,
+                    "error_type": "api_error",
+                    "status_code": response.status_code,
+                    "api_response": response.text,
                     "results": []
                 }
                 
-        except Exception as e:
+        except requests.exceptions.Timeout:
+            error_msg = "Search request timed out - please try again"
+            logger.error("Request timeout error")
             return {
                 "success": False,
-                "error": f"Search failed: {str(e)}",
+                "error": error_msg,
+                "error_type": "timeout_error",
+                "results": []
+            }
+        except requests.exceptions.ConnectionError:
+            error_msg = "Connection error - unable to reach Tavily API"
+            logger.error("Connection error")
+            return {
+                "success": False,
+                "error": error_msg,
+                "error_type": "connection_error",
+                "results": []
+            }
+        except requests.exceptions.RequestException as e:
+            error_msg = f"Request error: {str(e)}"
+            logger.error(f"Request exception: {str(e)}")
+            return {
+                "success": False,
+                "error": error_msg,
+                "error_type": "request_error",
+                "results": []
+            }
+        except Exception as e:
+            error_msg = f"Unexpected error during search: {str(e)}"
+            logger.error(f"Unexpected error: {str(e)}")
+            return {
+                "success": False,
+                "error": error_msg,
+                "error_type": "unexpected_error",
                 "results": []
             }
     
@@ -121,16 +207,46 @@ class SearchTools:
     
     def format_results_for_myanmar(self, results: Dict[str, Any]) -> str:
         """
-        Format search results for Myanmar language presentation.
+        Format search results for Myanmar language presentation with enhanced error handling.
         
         Args:
             results: Search results from Tavily API
             
         Returns:
-            Formatted Myanmar language summary
+            Formatted Myanmar language summary with detailed error information
         """
         if not results.get("success", False):
-            return f"❌ ရှာဖွေမှုမအောင်မြင်ပါ: {results.get('error', 'အမည်မသိသောအမှား')}"
+            error_type = results.get("error_type", "unknown")
+            error_msg = results.get("error", "အမည်မသိသောအမှား")
+            status_code = results.get("status_code")
+            api_response = results.get("api_response", "")
+            
+            # Log the error for debugging
+            logger.error(f"Search failed - Type: {error_type}, Message: {error_msg}, Status: {status_code}")
+            
+            # Format user-friendly error messages in Myanmar
+            error_messages = {
+                "missing_api_key": "❌ **API Key ပျောက်နေပါသည်**\n\nTAVILY_API_KEY ကို environment variables ထဲမှာ ထည့်ပေးပါ။",
+                "authentication_error": "❌ **API Key မှားနေပါသည်**\n\nTavily API key ကို စစ်ဆေးပြီး မှန်ကန်သော key ကို ထည့်ပေးပါ။",
+                "rate_limit_error": "❌ **API အသုံးပြုနှုန်းပြည့်နေပါသည်**\n\nခဏအကြာပြန်လည်ကြိုးစားပါ။",
+                "bad_request": "❌ **တောင်းဆိုမှုမှားနေပါသည်**\n\nရှာဖွေစရာကို ပြန်စစ်ဆေးပြီး ကြိုးစားပါ။",
+                "timeout_error": "❌ **တောင်းဆိုမှုကြာနေပါသည်**\n\nအင်တာနက်ချိတ်ဆက်မှုကို စစ်ဆေးပြီး ပြန်ကြိုးစားပါ။",
+                "connection_error": "❌ **ချိတ်ဆက်မှုပြဿနာ**\n\nအင်တာနက်ချိတ်ဆက်မှုကို စစ်ဆေးပါ။",
+                "request_error": f"❌ **တောင်းဆိုမှုအမှား**\n\n{error_msg}",
+                "api_error": f"❌ **API အမှား ({status_code})**\n\n{error_msg}",
+                "unexpected_error": f"❌ **မမျှော်လင့်ထားသောအမှား**\n\n{error_msg}"
+            }
+            
+            # Get the appropriate error message
+            user_error_msg = error_messages.get(error_type, f"❌ **ရှာဖွေမှုမအောင်မြင်ပါ**\n\n{error_msg}")
+            
+            # Add technical details for debugging (if available)
+            if status_code:
+                user_error_msg += f"\n\n**နည်းပညာအသေးစိတ်:**\n- Status Code: {status_code}"
+            if api_response and len(api_response) < 200:
+                user_error_msg += f"\n- API Response: {api_response}"
+            
+            return user_error_msg
         
         formatted_output = []
         formatted_output.append("🔍 **ရှာဖွေတွေ့ရှိသောအကြောင်းအရာများ**")

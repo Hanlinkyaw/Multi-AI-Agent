@@ -1,12 +1,39 @@
 #!/usr/bin/env python3
 """
 Test script for the upgraded Research Agent with real-time search capabilities.
-Demonstrates sports news, international news, and Myanmar news search.
+Demonstrates sports news, international news, and Myanmar news search with enhanced error handling.
 """
 
 import os
+import logging
 from dotenv import load_dotenv
 from src.agents.research_agent import ResearchAgent
+
+# Set up logging to see error messages
+logging.basicConfig(level=logging.INFO)
+
+def test_error_handling():
+    """Test the enhanced error handling in Research Agent."""
+    print("🧪 Testing Enhanced Error Handling")
+    print("=" * 60)
+    
+    # Test with missing API key
+    print("\n1. Testing without API Key:")
+    print("-" * 40)
+    
+    # Temporarily remove API key
+    original_key = os.getenv("TAVILY_API_KEY")
+    os.environ["TAVILY_API_KEY"] = ""
+    
+    agent = ResearchAgent()
+    result = agent.search_web("test query")
+    print(f"Result: {result}")
+    
+    # Restore API key
+    if original_key:
+        os.environ["TAVILY_API_KEY"] = original_key
+    
+    print("\n" + "=" * 60)
 
 def test_research_agent():
     """Test the enhanced Research Agent with various search queries."""
@@ -111,7 +138,7 @@ def test_agent_info():
         print(f"{key}: {value}")
 
 if __name__ == "__main__":
-    print("🚀 Enhanced Research Agent Test Suite")
+    print("🚀 Enhanced Research Agent Test Suite with Error Handling")
     print("=" * 60)
     
     # Check API keys
@@ -121,17 +148,13 @@ if __name__ == "__main__":
     print(f"🔑 Tavily API Key: {'✅ Configured' if tavily_key else '❌ Missing'}")
     print(f"🔑 Gemini API Key: {'✅ Configured' if gemini_key else '❌ Missing'}")
     
-    if not tavily_key:
-        print("\n⚠️  Warning: Tavily API key not found!")
-        print("   Set TAVILY_API_KEY in your .env file for real search results.")
-        print("   Without it, the agent will return mock responses.\n")
-    
     if not gemini_key:
         print("\n❌ Error: Gemini API key not found!")
         print("   Set GEMINI_API_KEY in your .env file to use the agent.")
         exit(1)
     
     test_agent_info()
+    test_error_handling()
     test_research_agent()
     
     print("\n🎉 Test completed!")
@@ -139,3 +162,4 @@ if __name__ == "__main__":
     print("- Configure TAVILY_API_KEY for real search results")
     print("- Try queries like: 'football news', 'international news', 'myanmar news'")
     print("- Use Myanmar or English language for best results")
+    print("- Check console logs for detailed error information")
