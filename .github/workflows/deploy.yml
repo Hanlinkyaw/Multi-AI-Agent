@@ -80,9 +80,14 @@ jobs:
           # Install Docker Compose if not present
           if ! command -v docker-compose &> /dev/null; then
             echo "Installing Docker Compose..."
-            sudo curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+            sudo curl -L "https://github.com/docker/compose/releases/download/v2.20.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
             sudo chmod +x /usr/local/bin/docker-compose
           fi
+          
+          # Check Docker and Docker Compose versions
+          echo "=== Docker Info ==="
+          docker --version
+          docker-compose --version
           
           # Load Docker image
           docker load < gemini-devops-bot.tar.gz
