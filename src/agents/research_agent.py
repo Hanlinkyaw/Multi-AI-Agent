@@ -88,55 +88,338 @@ class ResearchAgent(BaseAgent):
     
     def search_web(self, query: str) -> str:
         """
-        Perform web search using Tavily API with Myanmar formatting and enhanced error handling.
+        Perform web search using Tavily API with Myanmar formatting and AI-powered summarization.
         """
         logger.info(f"ResearchAgent performing web search for: '{query}'")
         try:
-            result = search_web(query, self.tavily_api_key)
+            # Get search results from Tavily
+            search_results = search_web(query, self.tavily_api_key)
             logger.info("Web search completed successfully")
-            return result
+            
+            # If search failed, return error
+            if not search_results.get("success", False):
+                return search_results
+            
+            # Extract content for summarization
+            results_list = search_results.get("results", [])
+            answer = search_results.get("answer", "")
+            
+            if not results_list and not answer:
+                return "❌ **ရှာဖွေရလဒ်မရှိပါသည်**\n\nရှာဖွေရလဒ်များမရှိပါပါသည်။ ကျေးသော keywords များကို ပြန်လည်ကြိုးစားပါ။"
+            
+            # Prepare content for AI analysis
+            content_to_analyze = f"""
+            ရှာဖွေရလဒ်တွေ့ရှိသောအကြောင်းအရာများ:
+            
+            Query: {query}
+            
+            အဖြေရှင်းများ:
+            {answer}
+            
+            ရှာဖွေရလဒ်ရလဒ်များ:
+            """
+            
+            for i, result in enumerate(results_list[:5], 1):
+                title = result.get("title", "")
+                content = result.get("content", "")
+                url = result.get("url", "")
+                published_date = result.get("published_date", "")
+                
+                content_to_analyze += f"""
+                {i}. {title}
+                အကြောင်းအရာ: {content[:300]}...
+                ထုတ်ပြန်ချိန်: {published_date}
+                လင့်ခ်: {url}
+                
+                """
+            
+            # Generate Myanmar summary using Gemini
+            summary_prompt = f"""သင်သည် ကူညီသောသော research assistant ဖြစ်ပါ။ ရှာဖွေတွေ့ရှိသောအကြောင်းအရာများကို စိစစ်ပြီး မြန်မာဘာသာဖြင့် ရှင်းလင်းပြပေးပါ။
+
+            လုပ်ဆောင်းချက်များ:
+            - အဓိပ္ပာယ်ဖွင့်ဆိုချက်ကို ရိုးရှင်းပါ
+            - Key facts များကို bullet points ဖြင့်ဖော်ပါ
+            - Technical jargon များကိုရှောင်းပါ
+            - Friendly conversational Myanmar style ဖြင့်ရေးပါ
+            - Links များကို အောက်ဆုံးတွင် references အဖြစ်သာပါ
+
+            ရှာဖွေတွေ့ရှိသောအကြောင်းအရာများ:
+            {content_to_analyze}
+
+            ယခုရှိသောအကြောင်းအရာများကို မြန်မာဘာသာဖြင့် စိစစ်ပြီး ရှင်းလင်းပေးပါ။"""
+            
+            try:
+                # Use Gemini model for summarization
+                response = self.model.generate_content(summary_prompt)
+                summary = response.text
+                
+                # Add source links at the bottom
+                links_section = "\n\n**📚 ရာထားအညွှန်းများ:**\n"
+                for i, result in enumerate(results_list[:5], 1):
+                    title = result.get("title", "")
+                    url = result.get("url", "")
+                    links_section += f"{i}. [{title}]({url})\n"
+                
+                return summary + links_section
+                
+            except Exception as e:
+                logger.error(f"Failed to generate summary: {str(e)}")
+                # Fallback to original search results if summarization fails
+                return search_results
+                
         except Exception as e:
             logger.error(f"Web search failed: {str(e)}")
             return f"❌ **ရှာဖွေမှုမအောင်မြင်ပါ**\n\nအမှားအကြောင်းရင်းခံ: {str(e)}"
     
     def search_sports_news(self, sport: str = "football") -> str:
         """
-        Search for latest sports news with Myanmar formatting and enhanced error handling.
+        Search for latest sports news with Myanmar formatting and AI-powered summarization.
         """
         logger.info(f"ResearchAgent performing sports news search for: '{sport}'")
         try:
-            result = search_sports(sport, self.tavily_api_key)
+            # Get search results from Tavily
+            search_results = search_sports(sport, self.tavily_api_key)
             logger.info("Sports news search completed successfully")
-            return result
+            
+            # If search failed, return error
+            if not search_results.get("success", False):
+                return search_results
+            
+            # Extract content for summarization
+            results_list = search_results.get("results", [])
+            answer = search_results.get("answer", "")
+            
+            if not results_list and not answer:
+                return f"❌ **{sport} အားကစားသတင်းများမရှိပါသည်**\n\nနောက်ဆုံး {sport} သတင်းများမရှိပါသည်။"
+            
+            # Prepare content for AI analysis
+            content_to_analyze = f"""
+            {sport} အားကစားသတင်းများတွေ့ရှိသောအကြောင်းအရာများ:
+            
+            အဖြေရှင်းများ:
+            {answer}
+            
+            ရှာဖွေရလဒ်ရလဒ်များ:
+            """
+            
+            for i, result in enumerate(results_list[:5], 1):
+                title = result.get("title", "")
+                content = result.get("content", "")
+                url = result.get("url", "")
+                published_date = result.get("published_date", "")
+                
+                content_to_analyze += f"""
+                {i}. {title}
+                အကြောင်းအရာ: {content[:300]}...
+                ထုတ်ပြန်ချိန်: {published_date}
+                လင့်ခ်: {url}
+                
+                """
+            
+            # Generate Myanmar summary using Gemini
+            summary_prompt = f"""သင်သည် ကူညီသောသော sports research assistant ဖြစ်ပါ။ {sport} အားကစားသတင်းများကို စိစစ်ပြီး မြန်မာဘာသာဖြင့် ရှင်းလင်းပြပေးပါ။
+
+            လုပ်ဆောင်းချက်များ:
+            - အဓိပ္ပာယ်ဖွင့်ဆိုချက်ကို ရိုးရှင်းပါ
+            - Key sports facts များကို bullet points ဖြင့်ဖော်ပါ
+            - Technical jargon များကိုရှောင်းပါ
+            - Friendly conversational Myanmar style ဖြင့်ရေးပါ
+            - Links များကို အောက်ဆုံးတွင် references အဖြစ်သာပါ
+
+            {sport} အားကစားသတင်းများတွေ့ရှိသောအကြောင်းအရာများ:
+            {content_to_analyze}
+
+            ယခုရှိသောအကြောင်းအရာများကို မြန်မာဘာသာဖြင့် စိစစ်ပြီး ရှင်းလင်းပေးပါ။"""
+            
+            try:
+                # Use Gemini model for summarization
+                response = self.model.generate_content(summary_prompt)
+                summary = response.text
+                
+                # Add source links at the bottom
+                links_section = f"\n\n**⚽ {sport} သတင်းများရာထားအညွှန်းများ:**\n"
+                for i, result in enumerate(results_list[:5], 1):
+                    title = result.get("title", "")
+                    url = result.get("url", "")
+                    links_section += f"{i}. [{title}]({url})\n"
+                
+                return summary + links_section
+                
+            except Exception as e:
+                logger.error(f"Failed to generate sports summary: {str(e)}")
+                # Fallback to original search results if summarization fails
+                return search_results
+                
         except Exception as e:
             logger.error(f"Sports news search failed: {str(e)}")
-            return f"❌ **အားကစားသတင်းရှာဖွေမှုမအောင်မြင်ပါ**\n\nအမှားအကြောင်းရင်းခံ: {str(e)}"
+            return f"❌ **{sport} အားကစားသတင်းရှာဖွေမှုမအောင်မြင်ပါ**\n\nအမှားအကြောင်းရင်းခံ: {str(e)}"
     
     def search_international_news(self, region: str = "global") -> str:
         """
-        Search for international news with Myanmar formatting and enhanced error handling.
+        Search for international news with Myanmar formatting and AI-powered summarization.
         """
         logger.info(f"ResearchAgent performing international news search for: '{region}'")
         try:
-            result = search_international_news(region, self.tavily_api_key)
+            # Get search results from Tavily
+            search_results = search_international_news(region, self.tavily_api_key)
             logger.info("International news search completed successfully")
-            return result
+            
+            # If search failed, return error
+            if not search_results.get("success", False):
+                return search_results
+            
+            # Extract content for summarization
+            results_list = search_results.get("results", [])
+            answer = search_results.get("answer", "")
+            
+            if not results_list and not answer:
+                return f"❌ **{region} နိုင်ငံတကာသတင်းများမရှိပါသည်**\n\nနောက်ဆုံး {region} သတင်းများမရှိပါသည်။"
+            
+            # Prepare content for AI analysis
+            content_to_analyze = f"""
+            {region} နိုင်ငံတကာသတင်းများတွေ့ရှိသောအကြောင်းအရာများ:
+            
+            အဖြေရှင်းများ:
+            {answer}
+            
+            ရှာဖွေရလဒ်ရလဒ်များ:
+            """
+            
+            for i, result in enumerate(results_list[:5], 1):
+                title = result.get("title", "")
+                content = result.get("content", "")
+                url = result.get("url", "")
+                published_date = result.get("published_date", "")
+                
+                content_to_analyze += f"""
+                {i}. {title}
+                အကြောင်းအရာ: {content[:300]}...
+                ထုတ်ပြန်ချိန်: {published_date}
+                လင့်ခ်: {url}
+                
+                """
+            
+            # Generate Myanmar summary using Gemini
+            summary_prompt = f"""သင်သည် ကူညီသောသော international news research assistant ဖြစ်ပါ။ {region} နိုင်ငံတကာသတင်းများကို စိစစ်ပြီး မြန်မာဘာသာဖြင့် ရှင်းလင်းပြပေးပါ။
+
+            လုပ်ဆောင်းချက်များ:
+            - အဓိပ္ပာယ်ဖွင့်ဆိုချက်ကို ရိုးရှင်းပါ
+            - Key international facts များကို bullet points ဖြင့်ဖော်ပါ
+            - Technical jargon များကိုရှောင်းပါ
+            - Friendly conversational Myanmar style ဖြင့်ရေးပါ
+            - Links များကို အောက်ဆုံးတွင် references အဖြစ်သာပါ
+
+            {region} နိုင်ငံတကာသတင်းများတွေ့ရှိသောအကြောင်းအရာများ:
+            {content_to_analyze}
+
+            ယခုရှိသောအကြောင်းအရာများကို မြန်မာဘာသာဖြင့် စိစစ်ပြီး ရှင်းလင်းပေးပါ။"""
+            
+            try:
+                # Use Gemini model for summarization
+                response = self.model.generate_content(summary_prompt)
+                summary = response.text
+                
+                # Add source links at the bottom
+                links_section = f"\n\n**🌍 {region} သတင်းများရာထားအညွှန်းများ:**\n"
+                for i, result in enumerate(results_list[:5], 1):
+                    title = result.get("title", "")
+                    url = result.get("url", "")
+                    links_section += f"{i}. [{title}]({url})\n"
+                
+                return summary + links_section
+                
+            except Exception as e:
+                logger.error(f"Failed to generate international news summary: {str(e)}")
+                # Fallback to original search results if summarization fails
+                return search_results
+                
         except Exception as e:
             logger.error(f"International news search failed: {str(e)}")
-            return f"❌ **နိုင်ငံတကာသတင်းရှာဖွေမှုမအောင်မြင်ပါ**\n\nအမှားအကြောင်းရင်းခံ: {str(e)}"
+            return f"❌ **{region} နိုင်ငံတကာသတင်းရှာဖွေမှုမအောင်မြင်ပါ**\n\nအမှားအကြောင်းရင်းခံ: {str(e)}"
     
     def search_myanmar_news(self) -> str:
         """
-        Search for Myanmar-specific news with Myanmar formatting and enhanced error handling.
+        Search for Myanmar-specific news with Myanmar formatting and AI-powered summarization.
         """
         logger.info("ResearchAgent performing Myanmar news search")
         try:
-            result = search_myanmar_news(self.tavily_api_key)
+            # Get search results from Tavily
+            search_results = search_myanmar_news(self.tavily_api_key)
             logger.info("Myanmar news search completed successfully")
-            return result
+            
+            # If search failed, return error
+            if not search_results.get("success", False):
+                return search_results
+            
+            # Extract content for summarization
+            results_list = search_results.get("results", [])
+            answer = search_results.get("answer", "")
+            
+            if not results_list and not answer:
+                return "❌ **မြန်မာနိုင်ငံတကာသတင်းများမရှိပါသည်**\n\nနောက်ဆုံး မြန်မာနိုင်ငံတကာသတင်းများမရှိပါသည်။"
+            
+            # Prepare content for AI analysis
+            content_to_analyze = f"""
+            မြန်မာနိုင်ငံတကာသတင်းများတွေ့ရှိသောအကြောင်းအရာများ:
+            
+            အဖြေရှင်းများ:
+            {answer}
+            
+            ရှာဖွေရလဒ်ရလဒ်များ:
+            """
+            
+            for i, result in enumerate(results_list[:5], 1):
+                title = result.get("title", "")
+                content = result.get("content", "")
+                url = result.get("url", "")
+                published_date = result.get("published_date", "")
+                
+                content_to_analyze += f"""
+                {i}. {title}
+                အကြောင်းအရာ: {content[:300]}...
+                ထုတ်ပြန်ချိန်: {published_date}
+                လင့်ခ်: {url}
+                
+                """
+            
+            # Generate Myanmar summary using Gemini
+            summary_prompt = f"""သင်သည် ကူညီသော Myanmar news research assistant ဖြစ်ပါ။ မြန်မာနိုင်ငံတကာသတင်းများကို စိစစ်ပြီး မြန်မာဘာသာဖြင့် ရှင်းလင်းပြပေးပါ။
+
+            လုပ်ဆောင်းချက်များ:
+            - အဓိပ္ပာယ်ဖွင့်ဆိုချက်ကို ရိုးရှင်းပါ
+            - Key Myanmar facts များကို bullet points ဖြင့်ဖော်ပါ
+            - Technical jargon များကိုရှောင်းပါ
+            - Friendly conversational Myanmar style ဖြင့်ရေးပါ
+            - Links များကို အောက်ဆုံးတွင် references အဖြစ်သာပါ
+            - 100% Myanmar language output
+
+            မြန်မာနိုင်ငံတကာသတင်းများတွေ့ရှိသောအကြောင်းအရာများ:
+            {content_to_analyze}
+
+            ယခုရှိသောအကြောင်းအရာများကို မြန်မာဘာသာဖြင့် စိစစ်ပြီး ရှင်းလင်းပေးပါ။"""
+            
+            try:
+                # Use Gemini model for summarization
+                response = self.model.generate_content(summary_prompt)
+                summary = response.text
+                
+                # Add source links at the bottom
+                links_section = "\n\n**🇲🇲 မြန်မာနိုင်ငံတကာသတင်းများရာထားအညွှန်းများ:**\n"
+                for i, result in enumerate(results_list[:5], 1):
+                    title = result.get("title", "")
+                    url = result.get("url", "")
+                    links_section += f"{i}. [{title}]({url})\n"
+                
+                return summary + links_section
+                
+            except Exception as e:
+                logger.error(f"Failed to generate Myanmar news summary: {str(e)}")
+                # Fallback to original search results if summarization fails
+                return search_results
+                
         except Exception as e:
             logger.error(f"Myanmar news search failed: {str(e)}")
-            return f"❌ **မြန်မာသတင်းရှာဖွေမှုမအောင်မြင်ပါ**\n\nအမှားအကြောင်းရင်းခံ: {str(e)}"
+            return f"❌ **မြန်မာနိုင်ငံတကာသတင်းရှာဖွေမှုမအောင်မြင်ပါ**\n\nအမှားအကြောင်းရင်းခံ: {str(e)}"
     
     def process_message(self, message: str, context: Optional[Dict[str, Any]] = None) -> str:
         """
