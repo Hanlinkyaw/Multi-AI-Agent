@@ -33,6 +33,19 @@ jobs:
       run: |
         docker save gemini-devops-bot:latest | gzip > gemini-devops-bot.tar.gz
     
+    - name: Setup EC2 directory
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.EC2_HOST }}
+        username: ${{ secrets.EC2_USERNAME }}
+        key: ${{ secrets.EC2_SSH_KEY }}
+        port: ${{ secrets.EC2_PORT || '22' }}
+        script: |
+          # Create directory with proper permissions
+          sudo mkdir -p /opt/gemini-devops-bot
+          sudo chown -R ${{ secrets.EC2_USERNAME }}:${{ secrets.EC2_USERNAME }} /opt/gemini-devops-bot
+          chmod 755 /opt/gemini-devops-bot
+    
     - name: Copy files to EC2
       uses: appleboy/scp-action@v0.1.7
       with:
@@ -43,6 +56,8 @@ jobs:
         source: "gemini-devops-bot.tar.gz,docker-compose.yml,.env"
         target: "/opt/gemini-devops-bot/"
         strip_components: 0
+        timeout: 60s
+        command_timeout: 10m
     
     - name: Deploy to EC2
       uses: appleboy/ssh-action@v1.0.3
@@ -52,10 +67,6 @@ jobs:
         key: ${{ secrets.EC2_SSH_KEY }}
         port: ${{ secrets.EC2_PORT || '22' }}
         script: |
-          # Create directory and set ownership
-          sudo mkdir -p /opt/gemini-devops-bot
-          sudo chown -R ${{ secrets.EC2_USERNAME }}:${{ secrets.EC2_USERNAME }} /opt/gemini-devops-bot
-          
           cd /opt/gemini-devops-bot
           
           # Install Docker if not present
