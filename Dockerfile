@@ -35,5 +35,5 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
 # Expose port (if needed for health checks)
 EXPOSE 8000
 
-# Default command - run the bot
-CMD ["python", "run_bot.py"]
+# Default command - run the bot with error handling
+CMD ["sh", "-c", "python run_bot.py || python bot_runner.py || python main.py"]

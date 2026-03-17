@@ -90,7 +90,10 @@ jobs:
           docker-compose --version
           
           # Load Docker image
+          echo "=== Loading Docker Image ==="
           docker load < gemini-devops-bot.tar.gz
+          echo "=== Available Images ==="
+          docker images | grep gemini-devops-bot
           
           # Stop and remove existing container
           docker-compose down || true
@@ -102,7 +105,21 @@ jobs:
           docker tag gemini-devops-bot:latest gemini-devops-bot:old || true
           
           # Start new container
+          echo "=== Starting Container ==="
           docker-compose up -d
+          
+          # Wait a bit and check status
+          sleep 5
+          echo "=== Container Status After Start ==="
+          docker-compose ps
+          
+          # Check logs if container failed to start
+          if ! docker-compose ps | grep -q "Up"; then
+            echo "=== Container Failed to Start - Checking Logs ==="
+            docker-compose logs
+            echo "=== Docker Events ==="
+            docker events --since 5m
+          fi
           
           # Wait for container to be healthy
           sleep 10
