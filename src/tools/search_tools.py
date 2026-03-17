@@ -226,14 +226,26 @@ class SearchTools:
         Returns:
             Formatted Myanmar language summary with detailed error information
         """
+        # Check if results is None or empty first
+        if not results:
+            error_msg = "No response received from search API"
+            logger.error("Empty or None response from search API")
+            return f"❌ **ရှာဖွေမှုမအောင်မြင်ပါ**\n\n{error_msg}"
+        
+        # Check if search was successful
         if not results.get("success", False):
             error_type = results.get("error_type", "unknown")
             error_msg = results.get("error", "အမည်မသိသောအမှား")
             status_code = results.get("status_code")
             api_response = results.get("api_response", "")
             
-            # Log the error for debugging
+            # Log error for debugging
             logger.error(f"Search failed - Type: {error_type}, Message: {error_msg}, Status: {status_code}")
+            
+            # Print API key status for debugging
+            api_key_status = "Available" if self.api_key else "Missing"
+            logger.info(f"API Key Status: {api_key_status}")
+            logger.info(f"API Key Value: {self.api_key[:10] + '...' if self.api_key else 'None'}")
             
             # Format user-friendly error messages in Myanmar (enhanced for free tier users)
             error_messages = {
@@ -250,13 +262,18 @@ class SearchTools:
             }
             
             # Get the appropriate error message
-            user_error_msg = error_messages.get(error_type, f"❌ **ရှာဖွေမှုမအောင်မြင်ပါ**\n\n{error_msg}")
+            user_error_msg = error_messages.get(error_type, f"❌ **API ကပြန်လာတဲ့ Error: {error_type}**\n\nအမှားအကြောင်းရင်းခံ: {error_msg}")
             
             # Add technical details for debugging (if available)
             if status_code:
                 user_error_msg += f"\n\n**နည်းပညာအသေးစိတ်:**\n- Status Code: {status_code}"
             if api_response and len(api_response) < 200:
                 user_error_msg += f"\n- API Response: {api_response}"
+            
+            # Add API key debugging info
+            user_error_msg += f"\n\n**Debugging Info:**\n- API Key Status: {api_key_status}"
+            if self.api_key:
+                user_error_msg += f"\n- API Key Length: {len(self.api_key)} chars"
             
             return user_error_msg
         
