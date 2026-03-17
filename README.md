@@ -111,9 +111,8 @@ Set the following secrets in your GitHub repository (Settings → Secrets and va
 | `EC2_HOST` | EC2 instance public IP or DNS | `ec2-xx-xx-xx-xx.compute.amazonaws.com` |
 | `EC2_USERNAME` | SSH username for EC2 | `ubuntu` or `ec2-user` |
 | `EC2_SSH_KEY` | Private SSH key content | `-----BEGIN RSA PRIVATE KEY-----...` |
+| `EC2_PORT` | SSH port for EC2 (default: 22) | `22` or `2222` |
 | `ENV_FILE` | Complete .env file content | `GEMINI_API_KEY=...` |
-| `DOCKER_USERNAME` (optional) | Docker Hub username | `yourusername` |
-| `DOCKER_PASSWORD` (optional) | Docker Hub password/token | `yourtoken` |
 
 #### Environment Variables
 

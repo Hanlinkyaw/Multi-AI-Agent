@@ -16,13 +16,6 @@ jobs:
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
       
-    - name: Login to Docker Hub (optional)
-      if: secrets.DOCKER_USERNAME != ''
-      uses: docker/login-action@v3
-      with:
-        username: ${{ secrets.DOCKER_USERNAME }}
-        password: ${{ secrets.DOCKER_PASSWORD }}
-    
     - name: Build Docker image
       uses: docker/build-push-action@v5
       with:
@@ -40,12 +33,13 @@ jobs:
       run: |
         docker save gemini-devops-bot:latest | gzip > gemini-devops-bot.tar.gz
     
-    - name: Copy image to EC2
+    - name: Copy files to EC2
       uses: appleboy/scp-action@v0.1.7
       with:
         host: ${{ secrets.EC2_HOST }}
         username: ${{ secrets.EC2_USERNAME }}
         key: ${{ secrets.EC2_SSH_KEY }}
+        port: ${{ secrets.EC2_PORT || '22' }}
         source: "gemini-devops-bot.tar.gz,docker-compose.yml,.env"
         target: "/opt/gemini-devops-bot/"
         strip_components: 0
@@ -56,12 +50,28 @@ jobs:
         host: ${{ secrets.EC2_HOST }}
         username: ${{ secrets.EC2_USERNAME }}
         key: ${{ secrets.EC2_SSH_KEY }}
+        port: ${{ secrets.EC2_PORT || '22' }}
         script: |
           # Create directory and set ownership
           sudo mkdir -p /opt/gemini-devops-bot
           sudo chown -R ${{ secrets.EC2_USERNAME }}:${{ secrets.EC2_USERNAME }} /opt/gemini-devops-bot
           
           cd /opt/gemini-devops-bot
+          
+          # Install Docker if not present
+          if ! command -v docker &> /dev/null; then
+            echo "Installing Docker..."
+            curl -fsSL https://get.docker.com -o get-docker.sh
+            sudo sh get-docker.sh
+            sudo usermod -aG docker ${{ secrets.EC2_USERNAME }}
+          fi
+          
+          # Install Docker Compose if not present
+          if ! command -v docker-compose &> /dev/null; then
+            echo "Installing Docker Compose..."
+            sudo curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+            sudo chmod +x /usr/local/bin/docker-compose
+          fi
           
           # Load Docker image
           docker load < gemini-devops-bot.tar.gz
@@ -75,7 +85,7 @@ jobs:
           # Tag current image as old before pulling new one
           docker tag gemini-devops-bot:latest gemini-devops-bot:old || true
           
-          # Start new container (no --build since image is loaded)
+          # Start new container
           docker-compose up -d
           
           # Wait for container to be healthy
@@ -97,6 +107,7 @@ jobs:
         host: ${{ secrets.EC2_HOST }}
         username: ${{ secrets.EC2_USERNAME }}
         key: ${{ secrets.EC2_SSH_KEY }}
+        port: ${{ secrets.EC2_PORT || '22' }}
         script: |
           cd /opt/gemini-devops-bot
           
@@ -124,8 +135,8 @@ jobs:
       run: |
         if [ "${{ job.status }}" == "success" ]; then
           echo "🚀 Deployment to EC2 completed successfully!"
-          echo "🤖 Bot is now running on: ${{ secrets.EC2_HOST }}"
+          echo "🤖 Bot is now running on: ${{ secrets.EC2_HOST }}:${{ secrets.EC2_PORT || '22' }}"
         else
           echo "❌ Deployment failed!"
-          echo "Please check the logs above for details."
+          echo "Please check logs above for details."
         fi
