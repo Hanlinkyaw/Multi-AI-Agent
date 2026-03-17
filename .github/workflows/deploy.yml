@@ -84,6 +84,12 @@ jobs:
             sudo chmod +x /usr/local/bin/docker-compose
           fi
           
+          # Check if files exist
+          echo "=== File Check ==="
+          ls -la
+          echo "=== .env file content ==="
+          cat .env || echo ".env file not found"
+          
           # Check Docker and Docker Compose versions
           echo "=== Docker Info ==="
           docker --version
@@ -119,6 +125,10 @@ jobs:
             docker-compose logs
             echo "=== Docker Events ==="
             docker events --since 5m
+            echo "=== Docker Inspect ==="
+            docker inspect gemini-devops-bot || echo "Container not found"
+            echo "=== Manual Docker Run Test ==="
+            docker run --rm --name test-bot gemini-devops-bot:latest echo "Container can run"
           fi
           
           # Wait for container to be healthy
