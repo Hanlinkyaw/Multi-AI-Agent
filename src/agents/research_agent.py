@@ -423,7 +423,7 @@ class ResearchAgent(BaseAgent):
     
     def process_message(self, message: str, context: Optional[Dict[str, Any]] = None) -> str:
         """
-        Process research-related messages with enhanced search capabilities and error handling.
+        Process research-related messages with AI-powered analysis and summarization.
         """
         if not self.can_handle(message):
             logger.warning(f"ResearchAgent cannot handle message: '{message}'")
@@ -433,6 +433,10 @@ class ResearchAgent(BaseAgent):
         message_lower = message.lower()
         
         try:
+            # Get search results first
+            search_results = None
+            search_type = "general"
+            
             # Check for specific search types
             if any(keyword in message_lower for keyword in ["sport", "sports", "အားကစား", "ဘောလုံး", "football", "ဘက်စုးဘော"]):
                 # Extract sport type if mentioned
@@ -441,7 +445,8 @@ class ResearchAgent(BaseAgent):
                     if s in message_lower:
                         sport = s
                         break
-                return self.search_sports_news(sport)
+                search_results = search_sports(sport, self.tavily_api_key)
+                search_type = "sports"
             
             elif any(keyword in message_lower for keyword in ["international", "world", "global", "နိုင်ငံတကာ", "ကမ္ဘာ"]):
                 # Extract region if mentioned
@@ -450,15 +455,146 @@ class ResearchAgent(BaseAgent):
                     if r in message_lower:
                         region = r
                         break
-                return self.search_international_news(region)
+                search_results = search_international_news(region, self.tavily_api_key)
+                search_type = "international"
             
             elif any(keyword in message_lower for keyword in ["myanmar", "burma", "မြန်မာ", "ရန်ကုန်"]):
-                return self.search_myanmar_news()
+                search_results = search_myanmar_news(self.tavily_api_key)
+                search_type = "myanmar"
             
             else:
                 # General web search
-                return self.search_web(message)
+                search_results = search_web(message, self.tavily_api_key)
+                search_type = "general"
+            
+            # Now analyze the search results with AI
+            return self._analyze_search_results(search_results, message, search_type)
                 
         except Exception as e:
             logger.error(f"ResearchAgent process_message failed: {str(e)}")
             return f"❌ **{self.name} တွင် error ဖြစ်ပါသည်**\n\nအမှားအကြောင်းရင်းခံ: {str(e)}"
+    
+    def _analyze_search_results(self, search_results: Dict[str, Any], original_query: str, search_type: str) -> str:
+        """
+        Analyze search results with AI and generate Myanmar summary.
+        """
+        # Check if search failed
+        if not search_results.get("success", False):
+            return search_results
+        
+        # Extract content for analysis
+        results_list = search_results.get("results", [])
+        answer = search_results.get("answer", "")
+        
+        if not results_list and not answer:
+            return "❌ **ရှာဖွေရလဒ်မရှိပါသည်**\n\nရှာဖွေရလဒ်များမရှိပါပါသည်။ ကျေးသော keywords များကို ပြန်လည်ကြိုးစားပါ။"
+        
+        # Prepare content for AI analysis
+        content_to_analyze = f"""
+        ရှာဖွေတွေ့ရှိသောအကြောင်းအရာများ ({search_type}):
+        
+        မေးခွန်း: {original_query}
+        
+        အဖြေရှင်းများ:
+        {answer}
+        
+        ရှာဖွေရလဒ်ရလဒ်များ:
+        """
+        
+        for i, result in enumerate(results_list[:5], 1):
+            title = result.get("title", "")
+            content = result.get("content", "")
+            url = result.get("url", "")
+            published_date = result.get("published_date", "")
+            
+            content_to_analyze += f"""
+            {i}. {title}
+            အကြောင်းအရာ: {content[:300]}...
+            ထုတ်ပြန်ချိန်: {published_date}
+            လင့်ခ်: {url}
+            
+            """
+        
+        # Generate strict Myanmar summary using Gemini
+        if search_type == "sports":
+            summary_prompt = f"""You are a professional News Summarizer. Never provide raw links as your primary answer. Analyze the search results and write a cohesive, friendly summary in fluent Myanmar language. Mention key highlights of football matches or sports news.
+
+            လုပ်ဆောင်းချက်များ:
+            - ရှာဖွေရလဒ်ရလဒ်များကို စိစစ်ပြီး မြန်မာဘာသာဖြင့် ရှင်းလင်းပြပေးပါ
+            - Key sports highlights များကို bullet points ဖြင့်ဖော်ပါ
+            - Football matches များရဲ့ အရေးအဖွဲ့များကို ရှင်းပါ
+            - Friendly conversational Myanmar style ဖြင့်ရေးပါ
+            - Links များကို အောက်ဆုံးတွင် [Sources] အဖြစ်သာပါ
+            - 100% Myanmar language ဖြင့်ရေးပါ
+
+            ရှာဖွေရလဒ်ရလဒ်များ:
+            {content_to_analyze}
+
+            ယခုရှိသောအကြောင်းအရာများကို မြန်မာဘာသာဖြင့် စိစစ်ပြီး ရှင်းလင်းပေးပါ။"""
+        
+        elif search_type == "international":
+            summary_prompt = f"""You are a professional News Summarizer. Never provide raw links as your primary answer. Analyze the search results and write a cohesive, friendly summary in fluent Myanmar language. Mention key highlights of international news.
+
+            လုပ်ဆောင်းချက်များ:
+            - ရှာဖွေရလဒ်ရလဒ်များကို စိစစ်ပြီး မြန်မာဘာသာဖြင့် ရှင်းလင်းပြပေးပါ
+            - Key international news highlights များကို bullet points ဖြင့်ဖော်ပါ
+            - Global events များရဲ့ အရေးအဖွဲ့များကို ရှင်းပါ
+            - Friendly conversational Myanmar style ဖြင့်ရေးပါ
+            - Links များကို အောက်ဆုံးတွင် [Sources] အဖြစ်သာပါ
+            - 100% Myanmar language ဖြင့်ရေးပါ
+
+            ရှာဖွေရလဒ်ရလဒ်များ:
+            {content_to_analyze}
+
+            ယခုရှိသောအကြောင်းအရာများကို မြန်မာဘာသာဖြင့် စိစစ်ပြီး ရှင်းလင်းပေးပါ။"""
+        
+        elif search_type == "myanmar":
+            summary_prompt = f"""You are a professional News Summarizer. Never provide raw links as your primary answer. Analyze the search results and write a cohesive, friendly summary in fluent Myanmar language. Mention key highlights of Myanmar news.
+
+            လုပ်ဆောင်းချက်များ:
+            - ရှာဖွေရလဒ်ရလဒ်များကို စိစစ်ပြီး မြန်မာဘာသာဖြင့် ရှင်းလင်းပြပေးပါ
+            - Key Myanmar news highlights များကို bullet points ဖြင့်ဖော်ပါ
+            - Local events များရဲ့ အရေးအဖွဲ့များကို ရှင်းပါ
+            - Friendly conversational Myanmar style ဖြင့်ရေးပါ
+            - Links များကို အောက်ဆုံးတွင် [Sources] အဖြစ်သာပါ
+            - 100% Myanmar language ဖြင့်ရေးပါ
+
+            ရှာဖွေရလဒ်ရလဒ်များ:
+            {content_to_analyze}
+
+            ယခုရှိသောအကြောင်းအရာများကို မြန်မာဘာသာဖြင့် စိစစ်ပြီး ရှင်းလင်းပေးပါ။"""
+        
+        else:  # general
+            summary_prompt = f"""You are a professional News Summarizer. Never provide raw links as your primary answer. Analyze the search results and write a cohesive, friendly summary in fluent Myanmar language. Mention key highlights of the search results.
+
+            လုပ်ဆောင်းချက်များ:
+            - ရှာဖွေရလဒ်ရလဒ်များကို စိစစ်ပြီး မြန်မာဘာသာဖြင့် ရှင်းလင်းပြပေးပါ
+            - Key highlights များကို bullet points ဖြင့်ဖော်ပါ
+            - Important information များရဲ့ အရေးအဖွဲ့များကို ရှင်းပါ
+            - Friendly conversational Myanmar style ဖြင့်ရေးပါ
+            - Links များကို အောက်ဆုံးတွင် [Sources] အဖြစ်သာပါ
+            - 100% Myanmar language ဖြင့်ရေးပါ
+
+            ရှာဖွေရလဒ်ရလဒ်များ:
+            {content_to_analyze}
+
+            ယခုရှိသောအကြောင်းအရာများကို မြန်မာဘာသာဖြင့် စိစစ်ပြီး ရှင်းလင်းပေးပါ။"""
+        
+        try:
+            # Generate AI summary
+            response = self.model.generate_content(summary_prompt)
+            summary = response.text
+            
+            # Add source links at the very end
+            links_section = "\n\n**[Sources]**\n"
+            for i, result in enumerate(results_list[:5], 1):
+                title = result.get("title", "")
+                url = result.get("url", "")
+                links_section += f"{i}. {title}: {url}\n"
+            
+            return summary + links_section
+            
+        except Exception as e:
+            logger.error(f"Failed to generate AI summary: {str(e)}")
+            # Fallback to original search results if summarization fails
+            return search_results
