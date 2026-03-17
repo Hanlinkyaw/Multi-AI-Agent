@@ -84,11 +84,15 @@ Telegram bot interface တည်ဆောက်ခြင်း။ Multi-agent sy
 
 ## Next Steps
 
-### Step 5: Advanced Features
-- Tavily search API integration
-- Agent collaboration mechanisms
-- Error handling and logging system
-- Performance monitoring and analytics
+### Step 5: Enhanced Research Agent ✅ COMPLETED
+- ✅ **Tavily search API integration** - Real-time web search
+- ✅ **Sports news search** - Football, basketball, tennis, etc.
+- ✅ **International news search** - Global and regional news
+- ✅ **Myanmar news search** - Local news in Myanmar
+- ✅ **Myanmar language summarization** - Clear Myanmar responses
+- 🔄 Agent collaboration mechanisms (in progress)
+- 🔄 Error handling and logging system (in progress)
+- 🔄 Performance monitoring and analytics (in progress)
 
 ## Deployment
 
@@ -189,6 +193,66 @@ docker-compose logs -f
 - Regularly update the EC2 instance and Docker
 - Use environment variables for sensitive data
 - Monitor container logs for unusual activity
+
+## 🔍 Enhanced Research Agent Features
+
+### Real-Time Search Capabilities
+
+The Research Agent now includes powerful real-time search features using the Tavily API:
+
+#### 📰 **News Search**
+- **Sports News**: Latest updates on football, basketball, tennis, cricket, and more
+- **International News**: Global news with regional focus (Asia, Europe, Americas)
+- **Myanmar News**: Local news and updates from Myanmar
+
+#### 🌐 **Search Features**
+- **Real-time Results**: Up-to-date information from the web
+- **Myanmar Language**: All results summarized in clear Myanmar language
+- **Source Attribution**: Links to original sources provided
+- **Smart Categorization**: Automatic detection of search type
+
+#### 🎯 **Usage Examples**
+```bash
+# Sports news (Myanmar)
+"နောက်ဆုံးဘောလုံးသတင်းများ"
+"basketball latest news"
+
+# International news (English/Myanmar)
+"international news asia"
+"နိုင်ငံတကာသတင်းများ"
+
+# Myanmar news
+"myanmar news today"
+"ရန်ကုန်သတင်းလတ်တလော"
+
+# General search
+"latest technology news"
+"AI developments 2024"
+```
+
+#### 🔧 **Setup Requirements**
+```bash
+# Add to your .env file
+TAVILY_API_KEY=your_tavily_api_key_here
+GEMINI_API_KEY=your_gemini_api_key_here
+```
+
+#### 🧪 **Testing the Research Agent**
+```bash
+# Run the test suite
+python test_research_agent.py
+
+# Test via Telegram bot
+/research
+"နောက်ဆုံးအားကစားသတင်းများ"
+```
+
+#### 📊 **Response Format**
+- 🔍 Search timestamp and query
+- 📄 Structured results with titles and summaries
+- 📅 Publication dates when available
+- 🔗 Direct links to original sources
+- 💡 AI-generated summaries in Myanmar language
 
 ## Local Development
 
