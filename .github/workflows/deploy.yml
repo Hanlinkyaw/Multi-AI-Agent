@@ -53,7 +53,7 @@ jobs:
         username: ${{ secrets.EC2_USERNAME }}
         key: ${{ secrets.EC2_SSH_KEY }}
         port: ${{ secrets.EC2_PORT || '22' }}
-        source: "gemini-devops-bot.tar.gz,docker-compose.yml,.env"
+        source: "gemini-devops-bot.tar.gz,docker-compose.yml,.env,Dockerfile"
         target: "/opt/gemini-devops-bot/"
         strip_components: 0
         timeout: 60s

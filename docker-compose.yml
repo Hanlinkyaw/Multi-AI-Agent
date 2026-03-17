@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   gemini-devops-bot:
-    build: .
+    image: gemini-devops-bot:latest
     container_name: gemini-devops-bot
     restart: always
     env_file:
