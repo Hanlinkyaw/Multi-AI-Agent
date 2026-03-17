@@ -1,9 +1,16 @@
 import os
-import requests
+import traceback
 from typing import Dict, List, Optional, Any
 from datetime import datetime
-import json
 import logging
+
+# Import Tavily SDK
+try:
+    from tavily import TavilyClient
+    TAVILY_SDK_AVAILABLE = True
+except ImportError:
+    TAVILY_SDK_AVAILABLE = False
+    logging.warning("Tavily SDK not installed. Please run: pip install tavily-python")
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -23,17 +30,27 @@ class SearchTools:
             api_key: Tavily API key (optional, uses env var if not provided)
         """
         self.api_key = api_key or os.getenv("TAVILY_API_KEY")
-        self.base_url = "https://api.tavily.com"
         
         # Check if API key is available
         if not self.api_key:
             logger.error("TAVILY_API_KEY is missing from environment variables")
         else:
-            logger.info("SearchTools initialized with Tavily API key")
+            logger.info(f"SearchTools initialized with Tavily API key (length: {len(self.api_key)})")
+            logger.info(f"API Key starts with: {self.api_key[:10]}...")
+        
+        # Initialize Tavily client
+        self.client = None
+        if self.api_key and TAVILY_SDK_AVAILABLE:
+            try:
+                self.client = TavilyClient(api_key=self.api_key)
+                logger.info("Tavily client initialized successfully")
+            except Exception as e:
+                logger.error(f"Failed to initialize Tavily client: {str(e)}")
+                logger.error(f"Traceback: {traceback.format_exc()}")
         
     def search_tavily(self, query: str, max_results: int = 5) -> Dict[str, Any]:
         """
-        Perform web search using Tavily API with enhanced error handling.
+        Perform web search using Tavily Python SDK with robust error handling.
         
         Args:
             query: Search query
@@ -53,125 +70,92 @@ class SearchTools:
                 "results": []
             }
         
+        # Check if Tavily SDK is available
+        if not TAVILY_SDK_AVAILABLE:
+            error_msg = "Tavily SDK not installed. Please run: pip install tavily-python"
+            logger.error(error_msg)
+            return {
+                "success": False,
+                "error": error_msg,
+                "error_type": "sdk_missing",
+                "results": []
+            }
+        
+        # Check if client is initialized
+        if not self.client:
+            error_msg = "Tavily client not initialized"
+            logger.error(error_msg)
+            return {
+                "success": False,
+                "error": error_msg,
+                "error_type": "client_not_initialized",
+                "results": []
+            }
+        
         try:
-            headers = {
-                "Content-Type": "application/json",
-                "Authorization": f"Bearer {self.api_key}"
-            }
+            logger.info(f"Making Tavily search request for query: '{query}'")
+            logger.info(f"Max results: {max_results}")
             
-            payload = {
-                "api_key": self.api_key,
-                "query": query,
-                "search_depth": "basic",
-                "include_answer": True,
-                "include_raw_content": False,
-                "max_results": max_results,
-                "include_domains": [],
-                "exclude_domains": []
-            }
-            
-            logger.info(f"Making search request for query: '{query}'")
-            
-            response = requests.post(
-                f"{self.base_url}/search",
-                headers=headers,
-                json=payload,
-                timeout=30
+            # Use Tavily SDK search method
+            response = self.client.search(
+                query=query,
+                max_results=max_results,
+                include_answer=True,
+                include_raw_content=False,
+                search_depth="basic"
             )
             
-            if response.status_code == 200:
-                logger.info("Search request successful")
-                return response.json()
-            elif response.status_code == 401:
-                error_msg = "Invalid API key - authentication failed"
-                logger.error(f"Authentication error: {response.text}")
-                return {
-                    "success": False,
-                    "error": error_msg,
-                    "error_type": "authentication_error",
-                    "status_code": response.status_code,
-                    "api_response": response.text,
-                    "results": []
-                }
-            elif response.status_code == 429:
-                error_msg = "API rate limit exceeded - please try again later"
-                logger.error(f"Rate limit error: {response.text}")
-                return {
-                    "success": False,
-                    "error": error_msg,
-                    "error_type": "rate_limit_error",
-                    "status_code": response.status_code,
-                    "api_response": response.text,
-                    "results": []
-                }
-            elif response.status_code == 402:
-                error_msg = "Payment required - quota exceeded"
-                logger.error(f"Payment required error: {response.text}")
-                return {
-                    "success": False,
-                    "error": error_msg,
-                    "error_type": "payment_required",
-                    "status_code": response.status_code,
-                    "api_response": response.text,
-                    "results": []
-                }
-            elif response.status_code == 400:
-                error_msg = "Bad request - invalid query parameters"
-                logger.error(f"Bad request error: {response.text}")
-                return {
-                    "success": False,
-                    "error": error_msg,
-                    "error_type": "bad_request",
-                    "status_code": response.status_code,
-                    "api_response": response.text,
-                    "results": []
-                }
+            logger.info("Tavily search request successful")
+            logger.info(f"Response keys: {list(response.keys()) if isinstance(response, dict) else 'Not a dict'}")
+            
+            # Ensure response has expected structure
+            if isinstance(response, dict):
+                response["success"] = True
+                return response
             else:
-                error_msg = f"API request failed with status code {response.status_code}"
-                logger.error(f"API error {response.status_code}: {response.text}")
+                logger.error(f"Unexpected response type: {type(response)}")
                 return {
                     "success": False,
-                    "error": error_msg,
-                    "error_type": "api_error",
-                    "status_code": response.status_code,
-                    "api_response": response.text,
+                    "error": f"Unexpected response type: {type(response)}",
+                    "error_type": "unexpected_response_type",
                     "results": []
                 }
                 
-        except requests.exceptions.Timeout:
-            error_msg = "Search request timed out - please try again"
-            logger.error("Request timeout error")
-            return {
-                "success": False,
-                "error": error_msg,
-                "error_type": "timeout_error",
-                "results": []
-            }
-        except requests.exceptions.ConnectionError:
-            error_msg = "Connection error - unable to reach Tavily API"
-            logger.error("Connection error")
-            return {
-                "success": False,
-                "error": error_msg,
-                "error_type": "connection_error",
-                "results": []
-            }
-        except requests.exceptions.RequestException as e:
-            error_msg = f"Request error: {str(e)}"
-            logger.error(f"Request exception: {str(e)}")
-            return {
-                "success": False,
-                "error": error_msg,
-                "error_type": "request_error",
-                "results": []
-            }
         except Exception as e:
-            error_msg = f"Unexpected error during search: {str(e)}"
-            logger.error(f"Unexpected error: {str(e)}")
+            error_msg = str(e)
+            error_type = "unknown"
+            
+            # Log full traceback for debugging
+            logger.error(f"Search failed with exception: {error_msg}")
+            logger.error(f"Full traceback: {traceback.format_exc()}")
+            
+            # Try to identify specific error types
+            if "401" in error_msg or "unauthorized" in error_msg.lower() or "authentication" in error_msg.lower():
+                error_type = "authentication_error"
+                error_msg = f"Invalid API key - authentication failed: {error_msg}"
+            elif "429" in error_msg or "rate limit" in error_msg.lower() or "quota" in error_msg.lower():
+                error_type = "rate_limit_error"
+                error_msg = f"API rate limit exceeded: {error_msg}"
+            elif "402" in error_msg or "payment required" in error_msg.lower():
+                error_type = "payment_required"
+                error_msg = f"Payment required - quota exceeded: {error_msg}"
+            elif "400" in error_msg or "bad request" in error_msg.lower():
+                error_type = "bad_request"
+                error_msg = f"Bad request - invalid query parameters: {error_msg}"
+            elif "timeout" in error_msg.lower():
+                error_type = "timeout_error"
+                error_msg = f"Request timeout: {error_msg}"
+            elif "connection" in error_msg.lower():
+                error_type = "connection_error"
+                error_msg = f"Connection error: {error_msg}"
+            else:
+                error_type = "unexpected_error"
+                error_msg = f"Unexpected error: {error_msg}"
+            
             return {
                 "success": False,
                 "error": error_msg,
-                "error_type": "unexpected_error",
+                "error_type": error_type,
                 "results": []
             }
     
@@ -250,6 +234,8 @@ class SearchTools:
             # Format user-friendly error messages in Myanmar (enhanced for free tier users)
             error_messages = {
                 "missing_api_key": "❌ **API Key ပျောက်နေပါသည်**\n\nTAVILY_API_KEY ကို environment variables ထဲမှာ ထည့်ပေးပါ။\n\nFree tier အတွက် Tavily မှ API key ရယူရန်: https://tavily.com/",
+                "sdk_missing": "❌ **Tavily SDK မရှိပါ**\n\nTavily Python SDK ကို install လုပ်ရန်လိုအပ်ပါသည်။\n\nအောက်က command ကို run ပါ: pip install tavily-python",
+                "client_not_initialized": "❌ **Tavily Client မစလုပ်နိုင်ပါ**\n\nTavily client ကို initialize လုပ်ရာတွင်အမှားဖြစ်ပါသည်။\n\nAPI key ကိုစစ်ဆေးပြီး ပြန်ကြိုးစားပါ။",
                 "authentication_error": "❌ **API Key မှားနေပါသည် (401)**\n\nTavily API key ကို စစ်ဆေးပြီး မှန်ကန်သော key ကို ထည့်ပေးပါ။\n\nFree tier သုံးပါက key ကို ပြန်လည်စစ်ဆေးပါ။",
                 "rate_limit_error": "❌ **Free Tier Quota ပြည့်သွားပါသည် (429)**\n\nTavily Free tier ရဲ့ လစဉ်အသုံးပြုနှုန်းပြည့်သွားပါပြီ။\n\nအဖြေရှင်းများ:\n- ခဏအကြာပြန်လည်ကြိုးစားပါ (မိနစ်အနည်းငယ်စောင့်ပါ)\n- Free tier ကို upgrade လုပ်ပါက ပိုမိုအသုံးပြုနိုင်ပါသည်\n- နောက်ထပ် ရက်များတွင် ပြန်လည်ကြိုးစားပါ",
                 "payment_required": "❌ **Free Tier Quota ကုန်ဆုံးသွားပါသည် (402)**\n\nTavily Free tier ရဲ့ လစဉ် quota ကုန်ဆုံးသွားပါပြီ။\n\nအဖြေရှင်းများ:\n- နောက်ထပ် ရက်များတွင် ပြန်လည်ကြိုးစားပါ (quota ပြန်ဖြည့်ပါသည်)\n- Paid plan သို့ upgrade လုပ်ပါက ပိုမိုအသုံးပြုနိုင်ပါသည်\n- ယခုလအတွင်း ပြန်လည်ကြိုးစားမပါနှင့်",
@@ -258,6 +244,7 @@ class SearchTools:
                 "connection_error": "❌ **ချိတ်ဆက်မှုပြဿနာ**\n\nအင်တာနက်ချိတ်ဆက်မှုကို စစ်ဆေးပါ။\n\nTavily API server များကို ရောက်နိုင်မရောက် စစ်ဆေးပါ။",
                 "request_error": f"❌ **တောင်းဆိုမှုအမှား**\n\n{error_msg}",
                 "api_error": f"❌ **API အမှား ({status_code})**\n\n{error_msg}\n\nFree tier အတွက် တချို့ API ကန့်သတ်ချက်များ ှိနိုင်ပါသည်။",
+                "unexpected_response_type": f"❌ **API Response Type မမှန်ပါ**\n\n{error_msg}\n\nAPI ကပြန်လာတဲ့ response type မှားနေပါသည်။",
                 "unexpected_error": f"❌ **မမျှော်လင့်ထားသောအမှား**\n\n{error_msg}\n\nFree tier တွင် ဖြစ်တတ်သော ပြဿနာဖြစ်နိုင်ပါသည်။"
             }
             
