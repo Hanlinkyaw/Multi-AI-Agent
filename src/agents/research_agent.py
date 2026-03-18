@@ -474,127 +474,160 @@ class ResearchAgent(BaseAgent):
             logger.error(f"ResearchAgent process_message failed: {str(e)}")
             return f"❌ **{self.name} တွင် error ဖြစ်ပါသည်**\n\nအမှားအကြောင်းရင်းခံ: {str(e)}"
     
-    def _analyze_search_results(self, search_results: Dict[str, Any], original_query: str, search_type: str) -> str:
+    def _analyze_search_results(self, search_results: Any, original_query: str, search_type: str) -> str:
         """
         Analyze search results with AI and generate Myanmar summary.
+        Handles both dictionary and string responses from search tools.
         """
-        # Check if search failed
-        if not search_results.get("success", False):
-            return search_results
+        # Debug logging to see what we're getting
+        logger.debug(f"Raw search results type: {type(search_results)}")
+        logger.debug(f"Raw search results content: {str(search_results)[:500]}...")
         
-        # Extract content for analysis
-        results_list = search_results.get("results", [])
-        answer = search_results.get("answer", "")
+        # Handle string responses (formatted Myanmar output)
+        if isinstance(search_results, str):
+            logger.info("Received formatted string response from search tool")
+            # If it's already a formatted string, check if it's an error
+            if "❌" in search_results or "**" in search_results:
+                # This looks like an error or formatted output, return as-is
+                return search_results
+            else:
+                # Try to parse it as JSON if it looks like JSON
+                try:
+                    import json
+                    parsed_results = json.loads(search_results)
+                    logger.info("Successfully parsed string as JSON")
+                    search_results = parsed_results
+                except (json.JSONDecodeError, Exception):
+                    logger.warning("Could not parse string as JSON, treating as plain text")
+                    return search_results
         
-        if not results_list and not answer:
-            return "❌ **ရှာဖွေရလဒ်မရှိပါသည်**\n\nရှာဖွေရလဒ်များမရှိပါပါသည်။ ကျေးသော keywords များကို ပြန်လည်ကြိုးစားပါ။"
-        
-        # Prepare content for AI analysis
-        content_to_analyze = f"""
-        ရှာဖွေတွေ့ရှိသောအကြောင်းအရာများ ({search_type}):
-        
-        မေးခွန်း: {original_query}
-        
-        အဖြေရှင်းများ:
-        {answer}
-        
-        ရှာဖွေရလဒ်ရလဒ်များ:
-        """
-        
-        for i, result in enumerate(results_list[:5], 1):
-            title = result.get("title", "")
-            content = result.get("content", "")
-            url = result.get("url", "")
-            published_date = result.get("published_date", "")
+        # Handle dictionary responses
+        if isinstance(search_results, dict):
+            logger.info("Processing dictionary response from search tool")
             
-            content_to_analyze += f"""
-            {i}. {title}
-            အကြောင်းအရာ: {content[:300]}...
-            ထုတ်ပြန်ချိန်: {published_date}
-            လင့်ခ်: {url}
+            # Check if search failed
+            if not search_results.get("success", False):
+                logger.warning("Search tool reported failure")
+                return search_results
             
+            # Extract content for analysis
+            results_list = search_results.get("results", [])
+            answer = search_results.get("answer", "")
+            
+            if not results_list and not answer:
+                return "❌ **ရှာဖွေရလဒ်မရှိပါသည်**\n\nရှာဖွေရလဒ်များမရှိပါပါသည်။ ကျေးသော keywords များကို ပြန်လည်ကြိုးစားပါ။"
+            
+            # Prepare content for AI analysis
+            content_to_analyze = f"""
+            ရှာဖွေတွေ့ရှိသောအကြောင်းအရာများ ({search_type}):
+            
+            မေးခွန်း: {original_query}
+            
+            အဖြေရှင်းများ:
+            {answer}
+            
+            ရှာဖွေရလဒ်ရလဒ်များ:
             """
-        
-        # Generate strict Myanmar summary using Gemini
-        if search_type == "sports":
-            summary_prompt = f"""You are a professional News Summarizer. Never provide raw links as your primary answer. Analyze the search results and write a cohesive, friendly summary in fluent Myanmar language. Mention key highlights of football matches or sports news.
-
-            လုပ်ဆောင်းချက်များ:
-            - ရှာဖွေရလဒ်ရလဒ်များကို စိစစ်ပြီး မြန်မာဘာသာဖြင့် ရှင်းလင်းပြပေးပါ
-            - Key sports highlights များကို bullet points ဖြင့်ဖော်ပါ
-            - Football matches များရဲ့ အရေးအဖွဲ့များကို ရှင်းပါ
-            - Friendly conversational Myanmar style ဖြင့်ရေးပါ
-            - Links များကို အောက်ဆုံးတွင် [Sources] အဖြစ်သာပါ
-            - 100% Myanmar language ဖြင့်ရေးပါ
-
-            ရှာဖွေရလဒ်ရလဒ်များ:
-            {content_to_analyze}
-
-            ယခုရှိသောအကြောင်းအရာများကို မြန်မာဘာသာဖြင့် စိစစ်ပြီး ရှင်းလင်းပေးပါ။"""
-        
-        elif search_type == "international":
-            summary_prompt = f"""You are a professional News Summarizer. Never provide raw links as your primary answer. Analyze the search results and write a cohesive, friendly summary in fluent Myanmar language. Mention key highlights of international news.
-
-            လုပ်ဆောင်းချက်များ:
-            - ရှာဖွေရလဒ်ရလဒ်များကို စိစစ်ပြီး မြန်မာဘာသာဖြင့် ရှင်းလင်းပြပေးပါ
-            - Key international news highlights များကို bullet points ဖြင့်ဖော်ပါ
-            - Global events များရဲ့ အရေးအဖွဲ့များကို ရှင်းပါ
-            - Friendly conversational Myanmar style ဖြင့်ရေးပါ
-            - Links များကို အောက်ဆုံးတွင် [Sources] အဖြစ်သာပါ
-            - 100% Myanmar language ဖြင့်ရေးပါ
-
-            ရှာဖွေရလဒ်ရလဒ်များ:
-            {content_to_analyze}
-
-            ယခုရှိသောအကြောင်းအရာများကို မြန်မာဘာသာဖြင့် စိစစ်ပြီး ရှင်းလင်းပေးပါ။"""
-        
-        elif search_type == "myanmar":
-            summary_prompt = f"""You are a professional News Summarizer. Never provide raw links as your primary answer. Analyze the search results and write a cohesive, friendly summary in fluent Myanmar language. Mention key highlights of Myanmar news.
-
-            လုပ်ဆောင်းချက်များ:
-            - ရှာဖွေရလဒ်ရလဒ်များကို စိစစ်ပြီး မြန်မာဘာသာဖြင့် ရှင်းလင်းပြပေးပါ
-            - Key Myanmar news highlights များကို bullet points ဖြင့်ဖော်ပါ
-            - Local events များရဲ့ အရေးအဖွဲ့များကို ရှင်းပါ
-            - Friendly conversational Myanmar style ဖြင့်ရေးပါ
-            - Links များကို အောက်ဆုံးတွင် [Sources] အဖြစ်သာပါ
-            - 100% Myanmar language ဖြင့်ရေးပါ
-
-            ရှာဖွေရလဒ်ရလဒ်များ:
-            {content_to_analyze}
-
-            ယခုရှိသောအကြောင်းအရာများကို မြန်မာဘာသာဖြင့် စိစစ်ပြီး ရှင်းလင်းပေးပါ။"""
-        
-        else:  # general
-            summary_prompt = f"""You are a professional News Summarizer. Never provide raw links as your primary answer. Analyze the search results and write a cohesive, friendly summary in fluent Myanmar language. Mention key highlights of the search results.
-
-            လုပ်ဆောင်းချက်များ:
-            - ရှာဖွေရလဒ်ရလဒ်များကို စိစစ်ပြီး မြန်မာဘာသာဖြင့် ရှင်းလင်းပြပေးပါ
-            - Key highlights များကို bullet points ဖြင့်ဖော်ပါ
-            - Important information များရဲ့ အရေးအဖွဲ့များကို ရှင်းပါ
-            - Friendly conversational Myanmar style ဖြင့်ရေးပါ
-            - Links များကို အောက်ဆုံးတွင် [Sources] အဖြစ်သာပါ
-            - 100% Myanmar language ဖြင့်ရေးပါ
-
-            ရှာဖွေရလဒ်ရလဒ်များ:
-            {content_to_analyze}
-
-            ယခုရှိသောအကြောင်းအရာများကို မြန်မာဘာသာဖြင့် စိစစ်ပြီး ရှင်းလင်းပေးပါ။"""
-        
-        try:
-            # Generate AI summary
-            response = self.model.generate_content(summary_prompt)
-            summary = response.text
             
-            # Add source links at the very end
-            links_section = "\n\n**[Sources]**\n"
             for i, result in enumerate(results_list[:5], 1):
                 title = result.get("title", "")
+                content = result.get("content", "")
                 url = result.get("url", "")
-                links_section += f"{i}. {title}: {url}\n"
+                published_date = result.get("published_date", "")
+                
+                content_to_analyze += f"""
+                {i}. {title}
+                အကြောင်းအရာ: {content[:300]}...
+                ထုတ်ပြန်ချိန်: {published_date}
+                လင့်ခ်: {url}
+                
+                """
             
-            return summary + links_section
+            # Generate strict Myanmar summary using Gemini
+            if search_type == "sports":
+                summary_prompt = f"""You are a professional News Summarizer. Never provide raw links as your primary answer. Analyze the search results and write a cohesive, friendly summary in fluent Myanmar language. Mention key highlights of football matches or sports news.
+
+                လုပ်ဆောင်းချက်များ:
+                - ရှာဖွေရလဒ်ရလဒ်များကို စိစစ်ပြီး မြန်မာဘာသာဖြင့် ရှင်းလင်းပြပေးပါ
+                - Key sports highlights များကို bullet points ဖြင့်ဖော်ပါ
+                - Football matches များရဲ့ အရေးအဖွဲ့များကို ရှင်းပါ
+                - Friendly conversational Myanmar style ဖြင့်ရေးပါ
+                - Links များကို အောက်ဆုံးတွင် [Sources] အဖြစ်သာပါ
+                - 100% Myanmar language ဖြင့်ရေးပါ
+
+                ရှာဖွေရလဒ်ရလဒ်များ:
+                {content_to_analyze}
+
+                ယခုရှိသောအကြောင်းအရာများကို မြန်မာဘာသာဖြင့် စိစစ်ပြီး ရှင်းလင်းပေးပါ။"""
             
-        except Exception as e:
-            logger.error(f"Failed to generate AI summary: {str(e)}")
-            # Fallback to original search results if summarization fails
-            return search_results
+            elif search_type == "international":
+                summary_prompt = f"""You are a professional News Summarizer. Never provide raw links as your primary answer. Analyze the search results and write a cohesive, friendly summary in fluent Myanmar language. Mention key highlights of international news.
+
+                လုပ်ဆောင်းချက်များ:
+                - ရှာဖွေရလဒ်ရလဒ်များကို စိစစ်ပြီး မြန်မာဘာသာဖြင့် ရှင်းလင်းပြပေးပါ
+                - Key international news highlights များကို bullet points ဖြင့်ဖော်ပါ
+                - Global events များရဲ့ အရေးအဖွဲ့များကို ရှင်းပါ
+                - Friendly conversational Myanmar style ဖြင့်ရေးပါ
+                - Links များကို အောက်ဆုံးတွင် [Sources] အဖြစ်သာပါ
+                - 100% Myanmar language ဖြင့်ရေးပါ
+
+                ရှာဖွေရလဒ်ရလဒ်များ:
+                {content_to_analyze}
+
+                ယခုရှိသောအကြောင်းအရာများကို မြန်မာဘာသာဖြင့် စိစစ်ပြီး ရှင်းလင်းပေးပါ။"""
+            
+            elif search_type == "myanmar":
+                summary_prompt = f"""You are a professional News Summarizer. Never provide raw links as your primary answer. Analyze the search results and write a cohesive, friendly summary in fluent Myanmar language. Mention key highlights of Myanmar news.
+
+                လုပ်ဆောင်းချက်များ:
+                - ရှာဖွေရလဒ်ရလဒ်များကို စိစစ်ပြီး မြန်မာဘာသာဖြင့် ရှင်းလင်းပြပေးပါ
+                - Key Myanmar news highlights များကို bullet points ဖြင့်ဖော်ပါ
+                - Local events များရဲ့ အရေးအဖွဲ့များကို ရှင်းပါ
+                - Friendly conversational Myanmar style ဖြင့်ရေးပါ
+                - Links များကို အောက်ဆုံးတွင် [Sources] အဖြစ်သာပါ
+                - 100% Myanmar language ဖြင့်ရေးပါ
+
+                ရှာဖွေရလဒ်ရလဒ်များ:
+                {content_to_analyze}
+
+                ယခုရှိသောအကြောင်းအရာများကို မြန်မာဘာသာဖြင့် စိစစ်ပြီး ရှင်းလင်းပေးပါ။"""
+            
+            else:  # general
+                summary_prompt = f"""You are a professional News Summarizer. Never provide raw links as your primary answer. Analyze the search results and write a cohesive, friendly summary in fluent Myanmar language. Mention key highlights of the search results.
+
+                လုပ်ဆောင်းချက်များ:
+                - ရှာဖွေရလဒ်ရလဒ်များကို စိစစ်ပြီး မြန်မာဘာသာဖြင့် ရှင်းလင်းပြပေးပါ
+                - Key highlights များကို bullet points ဖြင့်ဖော်ပါ
+                - Important information များရဲ့ အရေးအဖွဲ့များကို ရှင်းပါ
+                - Friendly conversational Myanmar style ဖြင့်ရေးပါ
+                - Links များကို အောက်ဆုံးတွင် [Sources] အဖြစ်သာပါ
+                - 100% Myanmar language ဖြင့်ရေးပါ
+
+                ရှာဖွေရလဒ်ရလဒ်များ:
+                {content_to_analyze}
+
+                ယခုရှိသောအကြောင်းအရာများကို မြန်မာဘာသာဖြင့် စိစစ်ပြီး ရှင်းလင်းပေးပါ။"""
+            
+            try:
+                # Generate AI summary
+                response = self.model.generate_content(summary_prompt)
+                summary = response.text
+                
+                # Add source links at the very end
+                links_section = "\n\n**[Sources]**\n"
+                for i, result in enumerate(results_list[:5], 1):
+                    title = result.get("title", "")
+                    url = result.get("url", "")
+                    links_section += f"{i}. {title}: {url}\n"
+                
+                return summary + links_section
+                
+            except Exception as e:
+                logger.error(f"Failed to generate AI summary: {str(e)}")
+                # Fallback to original search results if summarization fails
+                return str(search_results)
+        
+        # Handle unexpected types
+        else:
+            logger.error(f"Unexpected search results type: {type(search_results)}")
+            return f"❌ **ရှာဖွေမှုမအောင်မြင်ပါ**\n\nရှာဖွေရလဒ်အမျိုးအစားမမှန်ပါ: {type(search_results)}"
