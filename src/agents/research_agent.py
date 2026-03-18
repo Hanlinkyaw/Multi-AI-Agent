@@ -488,8 +488,15 @@ class ResearchAgent(BaseAgent):
             logger.info("Received formatted string response from search tool")
             # If it's already a formatted string, check if it's an error
             if "❌" in search_results or "**" in search_results:
-                # This looks like an error or formatted output, return as-is
-                return search_results
+                # This looks like an error, but still go through AI analysis
+                content_to_analyze = f"""
+                ရှာဖွေတွေ့ရှိသောအကြောင်းအရာများ ({search_type}) - Error Response:
+                
+                မေးခွန်း: {original_query}
+                
+                ရှာဖွေရလဒ်ရလဒ်များ:
+                {search_results}
+                """
             else:
                 # Try to parse it as JSON if it looks like JSON
                 try:
@@ -499,49 +506,90 @@ class ResearchAgent(BaseAgent):
                     search_results = parsed_results
                 except (json.JSONDecodeError, Exception):
                     logger.warning("Could not parse string as JSON, treating as plain text")
-                    return search_results
+                    # Still go through AI analysis even for plain text
+                    content_to_analyze = f"""
+                    ရှာဖွေတွေ့ရှိသောအကြောင်းအရာများ ({search_type}) - Plain Text:
+                    
+                    မေးခွန်း: {original_query}
+                    
+                    ရှာဖွေရလဒ်ရလဒ်များ:
+                    {search_results[:1000]}...
+                    """
         
         # Handle dictionary responses
         if isinstance(search_results, dict):
             logger.info("Processing dictionary response from search tool")
             
-            # Check if search failed
+            # Check if search failed - but still go through AI analysis
             if not search_results.get("success", False):
-                logger.warning("Search tool reported failure")
-                return search_results
-            
-            # Extract content for analysis
-            results_list = search_results.get("results", [])
-            answer = search_results.get("answer", "")
-            
-            if not results_list and not answer:
-                return "❌ **ရှာဖွေရလဒ်မရှိပါသည်**\n\nရှာဖွေရလဒ်များမရှိပါပါသည်။ ကျေးသော keywords များကို ပြန်လည်ကြိုးစားပါ။"
-            
-            # Prepare content for AI analysis
-            content_to_analyze = f"""
-            ရှာဖွေတွေ့ရှိသောအကြောင်းအရာများ ({search_type}):
-            
-            မေးခွန်း: {original_query}
-            
-            အဖြေရှင်းများ:
-            {answer}
-            
-            ရှာဖွေရလဒ်ရလဒ်များ:
-            """
-            
-            for i, result in enumerate(results_list[:5], 1):
-                title = result.get("title", "")
-                content = result.get("content", "")
-                url = result.get("url", "")
-                published_date = result.get("published_date", "")
+                logger.warning("Search tool reported failure, but still analyzing with AI")
+                # Extract whatever content we can for analysis
+                results_list = search_results.get("results", [])
+                answer = search_results.get("answer", "")
+                error_msg = search_results.get("error", "")
                 
-                content_to_analyze += f"""
-                {i}. {title}
-                အကြောင်းအရာ: {content[:300]}...
-                ထုတ်ပြန်ချိန်: {published_date}
-                လင့်ခ်: {url}
+                content_to_analyze = f"""
+                ရှာဖွေတွေ့ရှိသောအကြောင်းအရာများ ({search_type}) - Error Response:
                 
+                မေးခွန်း: {original_query}
+                
+                အမှားအကြောင်းရင်းခံ: {error_msg}
+                
+                အဖြေရှင်းများ: {answer}
+                
+                ရှာဖွေရလဒ်ရလဒ်များ:
                 """
+                
+                for i, result in enumerate(results_list[:3], 1):
+                    title = result.get("title", "")
+                    content = result.get("content", "")
+                    url = result.get("url", "")
+                    
+                    content_to_analyze += f"""
+                    {i}. {title}
+                    အကြောင်းအရာ: {content[:200]}...
+                    လင့်ခ်: {url}
+                    
+                    """
+            else:
+                # Extract content for analysis
+                results_list = search_results.get("results", [])
+                answer = search_results.get("answer", "")
+                
+                if not results_list and not answer:
+                    content_to_analyze = f"""
+                    ရှာဖွေတွေ့ရှိသောအကြောင်းအရာများ ({search_type}) - No Results:
+                    
+                    မေးခွန်း: {original_query}
+                    
+                    ရှာဖွေရလဒ်ရလဒ်များ: မရှိပါသည်။
+                    """
+                else:
+                    # Prepare content for AI analysis
+                    content_to_analyze = f"""
+                    ရှာဖွေတွေ့ရှိသောအကြောင်းအရာများ ({search_type}):
+                    
+                    မေးခွန်း: {original_query}
+                    
+                    အဖြေရှင်းများ:
+                    {answer}
+                    
+                    ရှာဖွေရလဒ်ရလဒ်များ:
+                    """
+                    
+                    for i, result in enumerate(results_list[:5], 1):
+                        title = result.get("title", "")
+                        content = result.get("content", "")
+                        url = result.get("url", "")
+                        published_date = result.get("published_date", "")
+                        
+                        content_to_analyze += f"""
+                        {i}. {title}
+                        အကြောင်းအရာ: {content[:300]}...
+                        ထုတ်ပြန်ချိန်: {published_date}
+                        လင့်ခ်: {url}
+                        
+                        """
             
             # Generate strict Myanmar summary using Gemini
             if search_type == "sports":
