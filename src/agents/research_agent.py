@@ -229,56 +229,6 @@ class ResearchAgent(BaseAgent):
             {sport} အားကစားသတင်းများတွေ့ရှိသောအကြောင်းအရာများ:
             {content_to_analyze}
 
-            ယခုရှိသောအကြောင်းအရာများကို မြန်မာဘာသာဖြင့် စိစစ်ပြီး ရှင်းလင်းပေးပါ။"""
-            
-            try:
-                # Use Gemini model for summarization
-                response = self.model.generate_content(summary_prompt)
-                summary = response.text
-                
-                # Add source links at the bottom
-                links_section = f"\n\n**⚽ {sport} သတင်းများရာထားအညွှန်းများ:**\n"
-                for i, result in enumerate(results_list[:5], 1):
-                    title = result.get("title", "")
-                    url = result.get("url", "")
-                    links_section += f"{i}. [{title}]({url})\n"
-                
-                return summary + links_section
-                
-            except Exception as e:
-                logger.error(f"Failed to generate sports summary: {str(e)}")
-                # Fallback to original search results if summarization fails
-                return search_results
-                
-        except Exception as e:
-            logger.error(f"Sports news search failed: {str(e)}")
-            return f"❌ **{sport} အားကစားသတင်းရှာဖွေမှုမအောင်မြင်ပါ**\n\nအမှားအကြောင်းရင်းခံ: {str(e)}"
-    
-    def search_international_news(self, region: str = "global") -> str:
-        """
-        Search for international news with Myanmar formatting and AI-powered summarization.
-        """
-        logger.info(f"ResearchAgent performing international news search for: '{region}'")
-        try:
-            # Get search results from Tavily
-            search_results = search_international_news(region, self.tavily_api_key)
-            logger.info("International news search completed successfully")
-            
-            # If search failed, return error
-            if not search_results.get("success", False):
-                return search_results
-            
-            # Extract content for summarization
-            results_list = search_results.get("results", [])
-            answer = search_results.get("answer", "")
-            
-            if not results_list and not answer:
-                return f"❌ **{region} နိုင်ငံတကာသတင်းများမရှိပါသည်**\n\nနောက်ဆုံး {region} သတင်းများမရှိပါသည်။"
-            
-            # Prepare content for AI analysis
-            content_to_analyze = f"""
-            {region} နိုင်ငံတကာသတင်းများတွေ့ရှိသောအကြောင်းအရာများ:
-            
             အဖြေရှင်းများ:
             {answer}
             
