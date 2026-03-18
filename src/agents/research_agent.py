@@ -545,69 +545,97 @@ class ResearchAgent(BaseAgent):
             
             # Generate strict Myanmar summary using Gemini
             if search_type == "sports":
-                summary_prompt = f"""You are a professional News Summarizer. Never provide raw links as your primary answer. Analyze the search results and write a cohesive, friendly summary in fluent Myanmar language. Mention key highlights of football matches or sports news.
+                summary_prompt = f"""You are a professional News Reader and Summarizer. Your role is to READ and EXPLAIN search results in fluent Myanmar language, not just find and paste links. Never provide raw links as your primary answer.
 
-                လုပ်ဆောင်းချက်များ:
-                - ရှာဖွေရလဒ်ရလဒ်များကို စိစစ်ပြီး မြန်မာဘာသာဖြင့် ရှင်းလင်းပြပေးပါ
-                - Key sports highlights များကို bullet points ဖြင့်ဖော်ပါ
-                - Football matches များရဲ့ အရေးအဖွဲ့များကို ရှင်းပါ
-                - Friendly conversational Myanmar style ဖြင့်ရေးပါ
-                - Links များကို အောက်ဆုံးတွင် [Sources] အဖြစ်သာပါ
-                - 100% Myanmar language ဖြင့်ရေးပါ
+                STRICT RESPONSE STRUCTURE:
+                1. ခြုံငုံသုံးသပ်ချက် (1-2 ကြောင်း)
+                2. အဓိက သတင်းအချက်အလက်များ (Bullet points ဖြင့်)
+                3. Sources (အောက်ဆုံးတွင် သီးသန့် Reference အဖြစ်သာ)
+
+                REQUIREMENTS:
+                - READ all search results carefully
+                - ANALYZE the content and extract key information
+                - WRITE a cohesive summary in 100% Myanmar language
+                - Structure exactly as specified above
+                - No English content in the summary
+                - Links only in Sources section at the bottom
 
                 ရှာဖွေရလဒ်ရလဒ်များ:
                 {content_to_analyze}
 
-                ယခုရှိသောအကြောင်းအရာများကို မြန်မာဘာသာဖြင့် စိစစ်ပြီး ရှင်းလင်းပေးပါ။"""
+                ယခုရှိသောအကြောင်းအရာများကို ဖတ်ပြီး မြန်မာဘာသာဖြင့် ရှင်းလင်းပေးပါ။"""
             
             elif search_type == "international":
-                summary_prompt = f"""You are a professional News Summarizer. Never provide raw links as your primary answer. Analyze the search results and write a cohesive, friendly summary in fluent Myanmar language. Mention key highlights of international news.
+                summary_prompt = f"""You are a professional News Reader and Summarizer. Your role is to READ and EXPLAIN search results in fluent Myanmar language, not just find and paste links. Never provide raw links as your primary answer.
 
-                လုပ်ဆောင်းချက်များ:
-                - ရှာဖွေရလဒ်ရလဒ်များကို စိစစ်ပြီး မြန်မာဘာသာဖြင့် ရှင်းလင်းပြပေးပါ
-                - Key international news highlights များကို bullet points ဖြင့်ဖော်ပါ
-                - Global events များရဲ့ အရေးအဖွဲ့များကို ရှင်းပါ
-                - Friendly conversational Myanmar style ဖြင့်ရေးပါ
-                - Links များကို အောက်ဆုံးတွင် [Sources] အဖြစ်သာပါ
-                - 100% Myanmar language ဖြင့်ရေးပါ
+                STRICT RESPONSE STRUCTURE:
+                1. ခြုံငုံသုံးသပ်ချက် (1-2 ကြောင်း)
+                2. အဓိက သတင်းအချက်အလက်များ (Bullet points ဖြင့်)
+                3. Sources (အောက်ဆုံးတွင် သီးသန့် Reference အဖြစ်သာ)
+
+                REQUIREMENTS:
+                - READ all search results carefully
+                - ANALYZE the content and extract key information
+                - WRITE a cohesive summary in 100% Myanmar language
+                - Structure exactly as specified above
+                - No English content in the summary
+                - Links only in Sources section at the bottom
 
                 ရှာဖွေရလဒ်ရလဒ်များ:
                 {content_to_analyze}
 
-                ယခုရှိသောအကြောင်းအရာများကို မြန်မာဘာသာဖြင့် စိစစ်ပြီး ရှင်းလင်းပေးပါ။"""
+                ယခုရှိသောအကြောင်းအရာများကို ဖတ်ပြီး မြန်မာဘာသာဖြင့် ရှင်းလင်းပေးပါ။"""
             
             elif search_type == "myanmar":
-                summary_prompt = f"""You are a professional News Summarizer. Never provide raw links as your primary answer. Analyze the search results and write a cohesive, friendly summary in fluent Myanmar language. Mention key highlights of Myanmar news.
+                summary_prompt = f"""You are a professional News Reader and Summarizer. Your role is to READ and EXPLAIN search results in fluent Myanmar language, not just find and paste links. Never provide raw links as your primary answer.
 
-                လုပ်ဆောင်းချက်များ:
-                - ရှာဖွေရလဒ်ရလဒ်များကို စိစစ်ပြီး မြန်မာဘာသာဖြင့် ရှင်းလင်းပြပေးပါ
-                - Key Myanmar news highlights များကို bullet points ဖြင့်ဖော်ပါ
-                - Local events များရဲ့ အရေးအဖွဲ့များကို ရှင်းပါ
-                - Friendly conversational Myanmar style ဖြင့်ရေးပါ
-                - Links များကို အောက်ဆုံးတွင် [Sources] အဖြစ်သာပါ
-                - 100% Myanmar language ဖြင့်ရေးပါ
+                STRICT RESPONSE STRUCTURE:
+                1. ခြုံငုံသုံးသပ်ချက် (1-2 ကြောင်း)
+                2. အဓိက သတင်းအချက်အလက်များ (Bullet points ဖြင့်)
+                3. Sources (အောက်ဆုံးတွင် သီးသန့် Reference အဖြစ်သာ)
+
+                REQUIREMENTS:
+                - READ all search results carefully
+                - ANALYZE the content and extract key information
+                - WRITE a cohesive summary in 100% Myanmar language
+                - Structure exactly as specified above
+                - No English content in the summary
+                - Links only in Sources section at the bottom
 
                 ရှာဖွေရလဒ်ရလဒ်များ:
                 {content_to_analyze}
 
-                ယခုရှိသောအကြောင်းအရာများကို မြန်မာဘာသာဖြင့် စိစစ်ပြီး ရှင်းလင်းပေးပါ။"""
-            
+                ယခုရှိသောအကြောင်းအရာများကို ဖတ်ပြီး မြန်မာဘာသာဖြင့် ရှင်းလင်းပေးပါ။"""
+                # Add source links at the very end
+                links_section = "\n\n**[Sources]**\n"
+                for i, result in enumerate(results_list[:5], 1):
+                    title = result.get("title", "")
+                    url = result.get("url", "")
+                    links_section += f"{i}. {title}: {url}\n"
+                
+                return summary + links_section
+                
             else:  # general
-                summary_prompt = f"""You are a professional News Summarizer. Never provide raw links as your primary answer. Analyze the search results and write a cohesive, friendly summary in fluent Myanmar language. Mention key highlights of the search results.
+                summary_prompt = f"""You are a professional News Reader and Summarizer. Your role is to READ and EXPLAIN search results in fluent Myanmar language, not just find and paste links. Never provide raw links as your primary answer.
 
-                လုပ်ဆောင်းချက်များ:
-                - ရှာဖွေရလဒ်ရလဒ်များကို စိစစ်ပြီး မြန်မာဘာသာဖြင့် ရှင်းလင်းပြပေးပါ
-                - Key highlights များကို bullet points ဖြင့်ဖော်ပါ
-                - Important information များရဲ့ အရေးအဖွဲ့များကို ရှင်းပါ
-                - Friendly conversational Myanmar style ဖြင့်ရေးပါ
-                - Links များကို အောက်ဆုံးတွင် [Sources] အဖြစ်သာပါ
-                - 100% Myanmar language ဖြင့်ရေးပါ
+                STRICT RESPONSE STRUCTURE:
+                1. ခြုံငုံသုံးသပ်ချက် (1-2 ကြောင်း)
+                2. အဓိက သတင်းအချက်အလက်များ (Bullet points ဖြင့်)
+                3. Sources (အောက်ဆုံးတွင် သီးသန့် Reference အဖြစ်သာ)
+
+                REQUIREMENTS:
+                - READ all search results carefully
+                - ANALYZE the content and extract key information
+                - WRITE a cohesive summary in 100% Myanmar language
+                - Structure exactly as specified above
+                - No English content in the summary
+                - Links only in Sources section at the bottom
 
                 ရှာဖွေရလဒ်ရလဒ်များ:
                 {content_to_analyze}
 
-                ယခုရှိသောအကြောင်းအရာများကို မြန်မာဘာသာဖြင့် စိစစ်ပြီး ရှင်းလင်းပေးပါ။"""
-            
+                ယခုရှိသောအကြောင်းအရာများကို ဖတ်ပြီး မြန်မာဘာသာဖြင့် ရှင်းလင်းပေးပါ။"""
+        
             try:
                 # Generate AI summary
                 response = self.model.generate_content(summary_prompt)
