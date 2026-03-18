@@ -547,82 +547,94 @@ class ResearchAgent(BaseAgent):
             if search_type == "sports":
                 summary_prompt = f"""You are a professional News Reader and Summarizer. Your role is to READ and EXPLAIN search results in fluent Myanmar language, not just find and paste links. Never provide raw links as your primary answer.
 
-                STRICT RESPONSE STRUCTURE:
-                1. ခြုံငုံသုံးသပ်ချက် (1-2 ကြောင်း)
-                2. အဓိက သတင်းအချက်အလက်များ (Bullet points ဖြင့်)
-                3. Sources (အောက်ဆုံးတွင် သီးသန့် Reference အဖြစ်သာ)
+                TWO-STEP PROCESS:
+                Step 1 (Search): Search tool has found the news
+                Step 2 (Summarize): Read ALL text from search results and write final response in Myanmar
 
-                REQUIREMENTS:
-                - READ all search results carefully
-                - ANALYZE the content and extract key information
-                - WRITE a cohesive summary in 100% Myanmar language
+                STRICT RESPONSE STRUCTURE:
+                ခေါင်းစဉ်: [သတင်းခေါင်းစဉ်]
+                
+                အနှစ်ချုပ်: [အခြေအနေအရပ်ရပ်ကို မြန်မာလို အသေးစိတ် အသေးစိတ်]
+                
+                အချက်အလက်များ: [Bullet points ဖြင့် အရေးကြီးအချက်များပြရန်]
+
+                CRITICAL REQUIREMENTS:
+                - READ ALL content from search tool results
+                - NEVER just list links
+                - SYNTHESIZE answer from the content
+                - Write in natural Myanmar language
                 - Structure exactly as specified above
-                - No English content in the summary
-                - Links only in Sources section at the bottom
 
                 ရှာဖွေရလဒ်ရလဒ်များ:
                 {content_to_analyze}
 
-                ယခုရှိသောအကြောင်းအရာများကို ဖတ်ပြီး မြန်မာဘာသာဖြင့် ရှင်းလင်းပေးပါ။"""
+                ယခုရှိသောအကြောင်းအရာများကို အပြည့်ဖတ်ပြီး မြန်မာဘာသာဖြင့် ရှင်းလင်းပေးပါ။"""
             
             elif search_type == "international":
                 summary_prompt = f"""You are a professional News Reader and Summarizer. Your role is to READ and EXPLAIN search results in fluent Myanmar language, not just find and paste links. Never provide raw links as your primary answer.
 
-                STRICT RESPONSE STRUCTURE:
-                1. ခြုံငုံသုံးသပ်ချက် (1-2 ကြောင်း)
-                2. အဓိက သတင်းအချက်အလက်များ (Bullet points ဖြင့်)
-                3. Sources (အောက်ဆုံးတွင် သီးသန့် Reference အဖြစ်သာ)
+                TWO-STEP PROCESS:
+                Step 1 (Search): Search tool has found the news
+                Step 2 (Summarize): Read ALL text from search results and write final response in Myanmar
 
-                REQUIREMENTS:
-                - READ all search results carefully
-                - ANALYZE the content and extract key information
-                - WRITE a cohesive summary in 100% Myanmar language
+                STRICT RESPONSE STRUCTURE:
+                ခေါင်းစဉ်: [သတင်းခေါင်းစဉ်]
+                
+                အနှစ်ချုပ်: [အခြေအနေအရပ်ရပ်ကို မြန်မာလို အသေးစိတ် အသေးစိတ်]
+                
+                အချက်အလက်များ: [Bullet points ဖြင့် အရေးကြီးအချက်များပြရန်]
+
+                CRITICAL REQUIREMENTS:
+                - READ ALL content from search tool results
+                - NEVER just list links
+                - SYNTHESIZE answer from the content
+                - Write in natural Myanmar language
                 - Structure exactly as specified above
-                - No English content in the summary
-                - Links only in Sources section at the bottom
 
                 ရှာဖွေရလဒ်ရလဒ်များ:
                 {content_to_analyze}
 
-                ယခုရှိသောအကြောင်းအရာများကို ဖတ်ပြီး မြန်မာဘာသာဖြင့် ရှင်းလင်းပေးပါ။"""
-            
+                ယခုရှိသောအကြောင်းအရာများကို အပြည့်ဖတ်ပြီး မြန်မာဘာသာဖြင့် ရှင်းလင်းပေးပါ။"""
+        
             elif search_type == "myanmar":
                 summary_prompt = f"""You are a professional News Reader and Summarizer. Your role is to READ and EXPLAIN search results in fluent Myanmar language, not just find and paste links. Never provide raw links as your primary answer.
 
-                STRICT RESPONSE STRUCTURE:
-                1. ခြုံငုံသုံးသပ်ချက် (1-2 ကြောင်း)
-                2. အဓိက သတင်းအချက်အလက်များ (Bullet points ဖြင့်)
-                3. Sources (အောက်ဆုံးတွင် သီးသန့် Reference အဖြစ်သာ)
+                TWO-STEP PROCESS:
+                Step 1 (Search): Search tool has found the news
+                Step 2 (Summarize): Read ALL text from search results and write final response in Myanmar
 
-                REQUIREMENTS:
-                - READ all search results carefully
-                - ANALYZE the content and extract key information
-                - WRITE a cohesive summary in 100% Myanmar language
+                STRICT RESPONSE STRUCTURE:
+                ခေါင်းစဉ်: [သတင်းခေါင်းစဉ်]
+                
+                အနှစ်ချုပ်: [အခြေအနေအရပ်ရပ်ကို မြန်မာလို အသေးစိတ် အသေးစိတ်]
+                
+                အချက်အလက်များ: [Bullet points ဖြင့် အရေးကြီးအချက်များပြရန်]
+
+                CRITICAL REQUIREMENTS:
+                - READ ALL content from search tool results
+                - NEVER just list links
+                - SYNTHESIZE answer from the content
+                - Write in natural Myanmar language
                 - Structure exactly as specified above
-                - No English content in the summary
-                - Links only in Sources section at the bottom
 
                 ရှာဖွေရလဒ်ရလဒ်များ:
                 {content_to_analyze}
 
-                ယခုရှိသောအကြောင်းအရာများကို ဖတ်ပြီး မြန်မာဘာသာဖြင့် ရှင်းလင်းပေးပါ။"""
-                # Add source links at the very end
-                links_section = "\n\n**[Sources]**\n"
-                for i, result in enumerate(results_list[:5], 1):
-                    title = result.get("title", "")
-                    url = result.get("url", "")
-                    links_section += f"{i}. {title}: {url}\n"
-                
-                return summary + links_section
-                
+                ယခုရှိသောအကြောင်းအရာများကို အပြည့်ဖတ်ပြီး မြန်မာဘာသာဖြင့် ရှင်းလင်းပေးပါ။"""
+        
             else:  # general
                 summary_prompt = f"""You are a professional News Reader and Summarizer. Your role is to READ and EXPLAIN search results in fluent Myanmar language, not just find and paste links. Never provide raw links as your primary answer.
 
-                STRICT RESPONSE STRUCTURE:
-                1. ခြုံငုံသုံးသပ်ချက် (1-2 ကြောင်း)
-                2. အဓိက သတင်းအချက်အလက်များ (Bullet points ဖြင့်)
-                3. Sources (အောက်ဆုံးတွင် သီးသန့် Reference အဖြစ်သာ)
+                TWO-STEP PROCESS:
+                Step 1 (Search): Search tool has found the news
+                Step 2 (Summarize): Read ALL text from search results and write final response in Myanmar
 
+                STRICT RESPONSE STRUCTURE:
+                ခေါင်းစဉ်: [သတင်းခေါင်းစဉ်]
+                
+                အနှစ်ချုပ်: [အခြေအနေအရပ်ရပ်ကို မြန်မာလို အသေးစိတ် အသေးစိတ်]
+                
+                အချက်အလက်များ: [Bullet points ဖြင့် အရေးကြီးအချက်များပြရန်]
                 REQUIREMENTS:
                 - READ all search results carefully
                 - ANALYZE the content and extract key information
@@ -636,24 +648,23 @@ class ResearchAgent(BaseAgent):
 
                 ယခုရှိသောအကြောင်းအရာများကို ဖတ်ပြီး မြန်မာဘာသာဖြင့် ရှင်းလင်းပေးပါ။"""
         
-            try:
-                # Generate AI summary
-                response = self.model.generate_content(summary_prompt)
-                summary = response.text
-                
-                # Add source links at the very end
-                links_section = "\n\n**[Sources]**\n"
-                for i, result in enumerate(results_list[:5], 1):
-                    title = result.get("title", "")
-                    url = result.get("url", "")
-                    links_section += f"{i}. {title}: {url}\n"
-                
-                return summary + links_section
-                
-            except Exception as e:
-                logger.error(f"Failed to generate AI summary: {str(e)}")
-                # Fallback to original search results if summarization fails
-                return str(search_results)
+        try:
+            # Generate AI summary
+            response = self.model.generate_content(summary_prompt)
+            summary = response.text
+            
+            # Add source links at the very end
+            links_section = "\n\n**[Sources]**\n"
+            for i, result in enumerate(results_list[:5], 1):
+                title = result.get("title", "")
+                url = result.get("url", "")
+                links_section += f"{i}. {title}: {url}\n"
+            
+            return summary + links_section
+            
+        except Exception as e:
+            logger.error(f"Failed to generate AI summary: {str(e)}")
+            return str(search_results)
         
         # Handle unexpected types
         else:
